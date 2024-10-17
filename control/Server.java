@@ -7,6 +7,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
+import control.model.Queue;
+
 public class Server implements Runnable {
 
     private Socket socket;
@@ -14,7 +16,6 @@ public class Server implements Runnable {
     private DataInputStream input;
     private DataOutputStream output;
     private Queue queue;
-    private String nombrePuntoAtencion;
     
     public Server(Socket socket, Queue queue, JFrameC window) {
         this.socket = socket;
@@ -43,6 +44,14 @@ public class Server implements Runnable {
                             sendMessage("401");
                         } 
                         break;
+                    case "GET_ATENTIONS_PLATFORM":
+                        try {
+                            String res = window.getAtentions();
+                            sendMessage(res);
+                        } catch (Exception e) {
+                            sendMessage("401");
+                        } 
+                        break;
                     case "CLOSE_ATENTION_PLATFORM":
                         try {
                             window.deleteAtention(Integer.parseInt(messageParts[1]));
@@ -67,10 +76,18 @@ public class Server implements Runnable {
                             sendMessage("401");
                         }
                         break;
+                    case "GET_QUEUE":
+                        try {
+                            String res = window.getQueue();
+                            sendMessage(res);
+                        } catch (Exception e) {
+                            sendMessage("401");
+                        }
+                        break;
                     case "DNI_REQUEST":
                         try {
-                            window.addClientToQueue(messageParts[1]);
-                            sendMessage("201");
+                            String res = window.addClientToQueue(messageParts[1]);
+                            sendMessage(res);
                         } catch (Exception e) {
                             sendMessage("401");
                         }

@@ -1,4 +1,4 @@
-package control;
+package control.model;
 
 public class Queue {
     private Object[] objects;
@@ -36,5 +36,9 @@ public class Queue {
 
     public int getSize(){
         return index + 1;
+    }
+
+    public Object[] getObjects(){
+        return this.objects;
     }
 }

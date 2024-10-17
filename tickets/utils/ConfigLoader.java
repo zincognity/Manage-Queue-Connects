@@ -1,4 +1,4 @@
-package control;
+package tickets.utils;
 
 import java.io.FileInputStream;
 import java.io.IOException;

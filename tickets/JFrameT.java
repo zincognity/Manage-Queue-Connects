@@ -1,6 +1,9 @@
 package tickets;
 
 import javax.swing.*;
+
+import tickets.utils.ConfigLoader;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.io.DataOutputStream;
@@ -11,20 +14,22 @@ import java.net.Socket;
 
 
 public class JFrameT extends JFrame {
-    private final JTextField dni = new JTextField(15);
+    private static ConfigLoader config = new ConfigLoader("tickets/config/config.properties");
+    private final JTextField dni = new JTextField(8);
     private Socket socket;
     private DataOutputStream output;
     private DataInputStream input;
-    private String name = "T01";
     private int index;
+    private String message;
+    private JLabel labelMessage;
 
     public void initialize() {
         try {
-            socket = new Socket("localhost",6000);
+            socket = new Socket(config.getProperty("control.server"),Integer.parseInt(config.getProperty("control.port")));
             output = new DataOutputStream(socket.getOutputStream());
             input = new DataInputStream(socket.getInputStream());
 
-            output.writeUTF("NEW_TICKET_PLATFORM" + "/" + name);
+            output.writeUTF("NEW_TICKET_PLATFORM" + "/" + config.getProperty("ticket.name"));
             index = Integer.parseInt(input.readUTF());
          /* PANEL */
             JPanel panel = new JPanel(new GridBagLayout());
@@ -34,6 +39,7 @@ public class JFrameT extends JFrame {
          /* LABELS AND FIELDS */
             JLabel label = new JLabel("DNI:");
             dni.setPreferredSize(new Dimension(200, 30));
+            labelMessage = new JLabel(message);
 
          /* BUTTONS */
             JButton button = new JButton("Pedir Ticket");
@@ -63,6 +69,12 @@ public class JFrameT extends JFrame {
             gbc.anchor = GridBagConstraints.CENTER;
             panel.add(button, gbc);
 
+            gbc.gridx = 0;
+            gbc.gridy = 2;
+            gbc.gridwidth = 2;
+            gbc.anchor = GridBagConstraints.CENTER;
+            panel.add(labelMessage, gbc);
+
             add(panel);
 
          /* CONFIGS */
@@ -74,11 +86,9 @@ public class JFrameT extends JFrame {
             addWindowListener(new WindowAdapter() {
                 @Override
                 public void windowClosing(WindowEvent e) {
-                   
                         try {
                             output.writeUTF("CLOSE_TICKET_PLATFORM" + "/" + index);
                             output.flush();
-                            System.out.println(input.readUTF());
                         } catch (IOException e1) {
                             System.err.println("Error al enviar el mensaje: " + e1.getMessage());
                             e1.printStackTrace();
@@ -87,7 +97,6 @@ public class JFrameT extends JFrame {
                             dispose();
                         }
                         dispose();
-                   
                 }
             });
             setVisible(true);
@@ -97,28 +106,22 @@ public class JFrameT extends JFrame {
     }
 
     private void onSubmit(JTextField field) {
-        JFrame frame = new JFrame();
         if(field.getText().length() < 8){
-            frame.setVisible(false);
+            labelMessage.setText("Ingresa un DNI válido");
             return;
         }
 
         try {
             output.writeUTF("DNI_REQUEST" + "/" + field.getText());
-            System.out.println("a");
+            labelMessage.setText(input.readUTF());
         } catch (Exception e) {
         }
-
-        frame.setTitle("DNI ingresado: " + field.getText()); 
-        frame.setSize(300, 150);
-        frame.setLocationRelativeTo(null);
-        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setVisible(true);
     }
 
     private void closeResources() {
         try {
             if (output != null) output.close();
+            if (input != null) input.close();
             if (socket != null) socket.close();
         } catch (IOException e) {
             e.printStackTrace();

@@ -16,4 +16,16 @@ public class Client {
     public int getDNI(){
         return this.dni;
     }
+
+    public String getName(){
+        return this.name;
+    }
+
+    public String getLastName(){
+        return this.lastname;
+    }
+
+    public String getAgeBorn(){
+        return this.age_born;
+    }
 }

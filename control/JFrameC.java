@@ -7,7 +7,11 @@ import javax.swing.*;
 
 import control.model.Atention;
 import control.model.Client;
+import control.model.ClientAtention;
+import control.model.Queue;
 import control.model.Ticket;
+import control.utils.ClientDataProcessor;
+import control.utils.ConfigLoader;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -26,6 +30,7 @@ public class JFrameC extends JFrame{
     private List<Atention> atention_connects = new ArrayList<Atention>();
     private List<Ticket> ticket_connects = new ArrayList<Ticket>();
     private List<Client> clients = dataProcessor.loadClients(DATA_FILE_PATH);
+    private int countAtention = 0;
 
     private JLabel labelTicketsResponse;
     private JLabel labelAtentionsResponse;
@@ -139,9 +144,38 @@ public class JFrameC extends JFrame{
     }
 
     public int addAtention(String name){
-        atention_connects.add(new Atention(ip, name, atention_connects.size()));
+        atention_connects.add(new Atention(ip, name, atention_connects.size(), null));
         labelAtentionsResponse.setText(Integer.toString(atention_connects.size()));
         return atention_connects.size() - 1;
+    }
+
+    public String getAtentions() {
+        StringBuilder atentions = new StringBuilder();
+        for (int i = 0; i < atention_connects.size(); i++) {
+            Atention atention = atention_connects.get(i);
+            atentions.append(atention.getName() + ":" + atention.getIndex() + ":" + atention.getAtending());
+            if (i < atention_connects.size() - 1) {
+                atentions.append(",");
+            }
+        }
+        System.out.println(atentions.toString());
+        return atentions.toString();
+    }
+
+    public String getQueue(){
+        StringBuilder queues = new StringBuilder();
+
+        for (Object obj : queue.getObjects()) {
+            if (obj instanceof ClientAtention) {
+                ClientAtention cl = (ClientAtention) obj;
+                queues.append(cl.getName() + ":" + cl.getAtentionIndex());
+                if (cl.getAtentionIndex() < atention_connects.size() - 1) {
+                    queues.append(",");
+                }
+            }
+        }
+
+        return queues.toString();
     }
 
     public void deleteAtention(int index){
@@ -160,7 +194,7 @@ public class JFrameC extends JFrame{
         labelTicketsResponse.setText(Integer.toString(ticket_connects.size()));
     }
 
-    public void addClientToQueue(String dni){
+    public String addClientToQueue(String dni){
         int index = 0;
         int found = -1;
         for (Client client : clients) {
@@ -171,11 +205,33 @@ public class JFrameC extends JFrame{
             index++;
         }
         if(found == -1){
-            throw new Error("NotFound");
+            return "No encontrado";
         }
         Client client = clients.get(found);
-        boolean response = queue.addObject(client);
-        if(!response) throw new Error("Valor maximo alcanzado");
+
+        for (Object obj : queue.getObjects()) {
+            if (obj instanceof ClientAtention) {
+                ClientAtention cl = (ClientAtention) obj;
+                if(client.getDNI() == cl.getDNI()){
+                    return "Ya tienes un ticket:" + atention_connects.get(cl.getAtentionIndex()).getAtending();
+                }
+            }
+        }
+
+        String ticket = "AT-" + countAtention;
+
+        for (Atention atention : atention_connects) {
+            if(atention.getAtending() == "Disponible"){
+                atention.setAtending(ticket);
+                return "Su ticket es:" + ticket;
+            }
+        }
+
+        ClientAtention clientAtention = new ClientAtention(client.getDNI(), client.getName(), client.getLastName(), client.getAgeBorn(), -1);
+        countAtention++;
+        boolean response = queue.addObject(clientAtention);
+        if(!response) return "Valor maximo alcanzado";
         labelQueueCountResponse.setText(Integer.toString(queue.getSize()));
+        return "Agregado exitósamente, espere su turno";
     }
 }
