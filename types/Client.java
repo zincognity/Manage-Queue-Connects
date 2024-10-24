@@ -1,6 +1,8 @@
-package control.model;
+package types;
 
-public class Client {
+import java.io.Serializable;
+
+public class Client implements Serializable {
     private int dni;
     private String name;
     private String lastname;

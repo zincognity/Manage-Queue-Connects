@@ -1,4 +1,4 @@
-package control.utils;
+package utils;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -6,11 +6,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import control.model.Client;
-
 public class ClientDataProcessor {
-    public List<Client> loadClients(String filePath){
-        List<Client> clients = new ArrayList<Client>();
+    public List<types.Client> loadClients(String filePath){
+        List<types.Client> clients = new ArrayList<types.Client>();
         String line;
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))){
             br.readLine();
@@ -23,7 +21,7 @@ public class ClientDataProcessor {
                 String age_born = values[3];
 
                 if(!dniStr.isEmpty() && !name.isEmpty() && !lastname.isEmpty() && !age_born.isEmpty()){
-                    Client client = new Client(Integer.parseInt(dniStr), name, lastname, age_born);
+                    types.Client client = new types.Client(Integer.parseInt(dniStr), name, lastname, age_born);
                     clients.add(client);
                 }
             }

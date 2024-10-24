@@ -4,48 +4,56 @@ import java.net.ServerSocket;
 import java.net.InetAddress;
 import java.net.Socket;
 import javax.swing.*;
-
-import control.model.Atention;
-import control.model.Client;
-import control.model.ClientAtention;
-import control.model.Queue;
-import control.model.Ticket;
-import control.utils.ClientDataProcessor;
-import control.utils.ConfigLoader;
-
+import types.Atention;
+import types.Manage;
+import utils.ClientDataProcessor;
+import utils.ConfigLoader;
+import types.Tickets;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import types.Ticket;
+import types.Client;
+import java.time.Duration;
+import java.time.LocalDateTime;
 
 public class JFrameC extends JFrame{
+    /* CONFIG */
     private static final String DATA_FILE_PATH = "control/data/clients.csv";
     private static ClientDataProcessor dataProcessor = new ClientDataProcessor();
     private static ConfigLoader config = new ConfigLoader("control/config/config.properties");
     private static int length = Integer.parseInt(config.getProperty("queue.size"));
     private static int port = Integer.parseInt(config.getProperty("control.port"));
+    
     private String ip;
+    //private static Queue queue = new Queue(length);
 
-    private static Queue queue = new Queue(length);
+    private ArrayList<Atention> atention_connects = new ArrayList<Atention>();
+    private ArrayList<Tickets> ticket_connects = new ArrayList<Tickets>();
+    private ArrayList<Manage> manage_connects = new ArrayList<Manage>();
 
-    private List<Atention> atention_connects = new ArrayList<Atention>();
-    private List<Ticket> ticket_connects = new ArrayList<Ticket>();
-    private List<Client> clients = dataProcessor.loadClients(DATA_FILE_PATH);
-    private int countAtention = 0;
+    private List<types.Client> clients = dataProcessor.loadClients(DATA_FILE_PATH);
 
+    private ArrayList<Ticket> tickets = new ArrayList<Ticket>();
+
+    private JLabel labelManageResponse;
     private JLabel labelTicketsResponse;
     private JLabel labelAtentionsResponse;
     private JLabel labelQueueCountResponse;
 
     public void initialize() {
+        for (int i = 0; i < 10; i++) {
+                tickets.add(new Ticket(new Tickets("19", "Si" + i, "nose"), null, new types.Client(i, "Nombre" + i, "Apellido" + i, "Fecha" + i), "T" + i));
+        }
         try (ServerSocket server = new ServerSocket(port)){
-         /* PANEL */
+            /* PANEL */
             JPanel panel = new JPanel(new GridBagLayout());
             GridBagConstraints gbc = new GridBagConstraints();
             gbc.insets = new Insets(10, 10, 10, 10);
 
             ip = InetAddress.getLocalHost().getHostAddress();
 
-         /* LABELS AND FIELDS */
+            /* LABELS AND FIELDS */
             JLabel labelIP = new JLabel("DIRECCIÓN IP:");
             JLabel labelIPResponse = new JLabel(ip);
             JLabel labelPort = new JLabel("PUERTO:");
@@ -53,17 +61,19 @@ public class JFrameC extends JFrame{
             JLabel labelMax = new JLabel("TAMAÑO MÁXIMO DE LA COLA:");
             JLabel labelMaxResponse = new JLabel(Integer.toString(length));
             JLabel labelCount = new JLabel("PERSONAS EN LA COLA:");
-            labelQueueCountResponse = new JLabel(Integer.toString(queue.getSize()));
+            labelQueueCountResponse = new JLabel("1");
+            JLabel labelManage = new JLabel("PANTALLAS TRABAJANDO");
+            labelManageResponse = new JLabel(Integer.toString(manage_connects.size()));
             JLabel labelTickets = new JLabel("TICKETS TRABAJANDO:");
             labelTicketsResponse = new JLabel(Integer.toString(ticket_connects.size()));
             JLabel labelAtentions = new JLabel("ATENCIONES TRABAJANDO:");
             labelAtentionsResponse = new JLabel(Integer.toString(atention_connects.size()));
 
-         /* BUTTONS */
+            /* BUTTONS */
 
-         /* ACTIONS */
+            /* ACTIONS */
 
-         /* ADDS */
+            /* ADDS */
             gbc.gridx = 0;
             gbc.gridy = 0;
             gbc.anchor = GridBagConstraints.LINE_START;
@@ -124,10 +134,20 @@ public class JFrameC extends JFrame{
             gbc.anchor = GridBagConstraints.LINE_START;
             panel.add(labelTicketsResponse, gbc);
 
+            gbc.gridx = 0;
+            gbc.gridy = 6;
+            gbc.anchor = GridBagConstraints.LINE_START;
+            panel.add(labelManage, gbc);
+
+            gbc.gridx = 1;
+            gbc.gridy = 6;
+            gbc.anchor = GridBagConstraints.LINE_START;
+            panel.add(labelManageResponse, gbc);
+
             add(panel);
 
-         /* CONFIGS */
-            setTitle("Tickets");
+            /* CONFIGS */
+            setTitle("Control");
             setSize(400, 800);
             setMinimumSize(new Dimension(300, 200));
             setLocationRelativeTo(null);
@@ -136,102 +156,115 @@ public class JFrameC extends JFrame{
 
             while(true) {
                 Socket socket = server.accept();
-                new Thread(new Server(socket, queue, this)).start();
+                new Thread(new Server(socket, this)).start();
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public int addAtention(String name){
-        atention_connects.add(new Atention(ip, name, atention_connects.size(), null));
-        labelAtentionsResponse.setText(Integer.toString(atention_connects.size()));
-        return atention_connects.size() - 1;
-    }
-
-    public String getAtentions() {
-        StringBuilder atentions = new StringBuilder();
-        for (int i = 0; i < atention_connects.size(); i++) {
-            Atention atention = atention_connects.get(i);
-            atentions.append(atention.getName() + ":" + atention.getIndex() + ":" + atention.getAtending());
-            if (i < atention_connects.size() - 1) {
-                atentions.append(",");
+    public int addManage(Manage manage) {
+        for (Manage mng : manage_connects) {
+            if(mng.getIP().equals(manage.getIP()) && mng.getName().equals(manage.getName())) {
+                return 0;
             }
         }
-        System.out.println(atentions.toString());
-        return atentions.toString();
+        manage_connects.add(manage);
+        labelManageResponse.setText(Integer.toString(manage_connects.size()));
+        return 1;
     }
 
-    public String getQueue(){
-        StringBuilder queues = new StringBuilder();
+    public int removeManage(Manage manage) {
+        for (Manage mng : manage_connects) {
+            if(mng.getIP().equals(manage.getIP()) && mng.getName().equals(manage.getName())) {
+                manage_connects.remove(mng);
+                labelManageResponse.setText(Integer.toString(manage_connects.size()));
+            }
+        }
+        return manage_connects.size();
+    }
 
-        for (Object obj : queue.getObjects()) {
-            if (obj instanceof ClientAtention) {
-                ClientAtention cl = (ClientAtention) obj;
-                queues.append(cl.getName() + ":" + cl.getAtentionIndex());
-                if (cl.getAtentionIndex() < atention_connects.size() - 1) {
-                    queues.append(",");
+    public int addAtention(Atention atention){
+        for (Atention atn : atention_connects) {
+            if(atn.getIP().equals(atention.getIP()) && atn.getName().equals(atention.getName())) {
+                return 0;
+            }
+        }
+        atention_connects.add(atention);
+        labelAtentionsResponse.setText(Integer.toString(atention_connects.size()));
+        return 1;
+    }
+
+    public int removeAtention(Atention atention){
+        for (Atention atn : atention_connects) {
+            if(atn.getIP().equals(atention.getIP()) && atn.getName().equals(atention.getName())) {
+                atention_connects.remove(atn);
+                labelAtentionsResponse.setText(Integer.toString(atention_connects.size()));
+            }
+        }
+        return atention_connects.size();
+    }
+
+    public int addTicket(Tickets ticket) {
+        for (Tickets tkt : ticket_connects) {
+            if(tkt.getIP().equals(ticket.getIP()) && tkt.getName().equals(ticket.getName())) {
+                return 0;
+            }
+        }
+        ticket_connects.add(ticket);
+        labelTicketsResponse.setText(Integer.toString(ticket_connects.size()));
+        return 1;
+    }
+
+    public int removeTicket(Tickets ticket) {
+        for (Tickets tkt : ticket_connects) {
+            if(tkt.getIP().equals(ticket.getIP()) && tkt.getName().equals(ticket.getName())) {
+                ticket_connects.remove(tkt);
+                labelTicketsResponse.setText(Integer.toString(ticket_connects.size()));
+            }
+        }
+        return ticket_connects.size();
+    }
+
+    public Client reqClient(int dni) {
+        Client clientRes = null;
+        for (Client clt : clients) {
+            if(clt.getDNI() == dni) clientRes = clt;
+        }
+        return clientRes;
+    }
+
+    public Ticket createTicket(int dni, Tickets ticket) {
+        Client clientResponse = reqClient(dni);
+        Ticket newTicket = new Ticket(new Tickets(null, null, null), null, null, null);
+
+        if (clientResponse == null) {
+            newTicket.getTickets().setMessage("EL CLIENTE NO EXISTE");
+            return newTicket;
+        }
+
+        for (Ticket tkt : tickets) {
+            if (tkt.getClient().getDNI() == dni) {
+                LocalDateTime lastTicketTime = tkt.getCreateAt();
+                Duration duration = Duration.between(lastTicketTime, LocalDateTime.now());
+    
+                if (duration.toMinutes() < 5) {
+                    newTicket.getTickets().setMessage("YA TIENES UN TICKET, DEBES ESPERAR AL MENOS 5 MINUTOS PARA SACAR OTRO");
+                    return newTicket;
                 }
             }
         }
 
-        return queues.toString();
+        String name = "T-" + tickets.size();
+        newTicket = new Ticket(ticket, null, clientResponse, name);
+        tickets.add(newTicket);
+    
+        return newTicket;
     }
+    
 
-    public void deleteAtention(int index){
-        atention_connects.remove(index);
-        labelAtentionsResponse.setText(Integer.toString(atention_connects.size()));
-    }
-
-    public int addTicket(String name){
-        ticket_connects.add(new Ticket(ip, name, ticket_connects.size()));
-        labelTicketsResponse.setText(Integer.toString(ticket_connects.size()));
-        return ticket_connects.size() - 1;
-    }
-
-    public void deleteTicket(int index){
-        ticket_connects.remove(index);
-        labelTicketsResponse.setText(Integer.toString(ticket_connects.size()));
-    }
-
-    public String addClientToQueue(String dni){
-        int index = 0;
-        int found = -1;
-        for (Client client : clients) {
-            if(client.getDNI() == ((Integer.parseInt(dni)))){
-                found = index;
-                break;
-            }
-            index++;
-        }
-        if(found == -1){
-            return "No encontrado";
-        }
-        Client client = clients.get(found);
-
-        for (Object obj : queue.getObjects()) {
-            if (obj instanceof ClientAtention) {
-                ClientAtention cl = (ClientAtention) obj;
-                if(client.getDNI() == cl.getDNI()){
-                    return "Ya tienes un ticket:" + atention_connects.get(cl.getAtentionIndex()).getAtending();
-                }
-            }
-        }
-
-        String ticket = "AT-" + countAtention;
-
-        for (Atention atention : atention_connects) {
-            if(atention.getAtending() == "Disponible"){
-                atention.setAtending(ticket);
-                return "Su ticket es:" + ticket;
-            }
-        }
-
-        ClientAtention clientAtention = new ClientAtention(client.getDNI(), client.getName(), client.getLastName(), client.getAgeBorn(), -1);
-        countAtention++;
-        boolean response = queue.addObject(clientAtention);
-        if(!response) return "Valor maximo alcanzado";
-        labelQueueCountResponse.setText(Integer.toString(queue.getSize()));
-        return "Agregado exitósamente, espere su turno";
+    public ArrayList<Ticket> getTickets() {
+        System.out.println(tickets.size());
+        return tickets;
     }
 }

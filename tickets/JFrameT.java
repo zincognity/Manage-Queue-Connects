@@ -2,49 +2,52 @@ package tickets;
 
 import javax.swing.*;
 
-import tickets.utils.ConfigLoader;
+import models.ClientBase;
+import types.Ticket;
+import types.Tickets;
+import utils.ConfigLoader;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.io.DataOutputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
-
-
+import java.net.InetAddress;
 
 public class JFrameT extends JFrame {
     private static ConfigLoader config = new ConfigLoader("tickets/config/config.properties");
     private final JTextField dni = new JTextField(8);
+
     private Socket socket;
-    private DataOutputStream output;
-    private DataInputStream input;
-    private int index;
-    private String message;
+    private ObjectOutputStream output;
+    private ObjectInputStream input;
+
     private JLabel labelMessage;
+
+    private ClientBase client;
 
     public void initialize() {
         try {
-            socket = new Socket(config.getProperty("control.server"),Integer.parseInt(config.getProperty("control.port")));
-            output = new DataOutputStream(socket.getOutputStream());
-            input = new DataInputStream(socket.getInputStream());
+            String ip = InetAddress.getLocalHost().getHostAddress();
+            client = new Tickets(ip, config.getProperty("ticket.name"), null);
+            sendMessage("Initialize");
 
-            output.writeUTF("NEW_TICKET_PLATFORM" + "/" + config.getProperty("ticket.name"));
-            index = Integer.parseInt(input.readUTF());
-         /* PANEL */
+            int res = (int) input.readObject();
+            if(res == 0) return;
+
+            /* PANEL */
             JPanel panel = new JPanel(new GridBagLayout());
             GridBagConstraints gbc = new GridBagConstraints();
             gbc.insets = new Insets(10, 10, 10, 10);
 
-         /* LABELS AND FIELDS */
+            /* LABELS AND FIELDS */
             JLabel label = new JLabel("DNI:");
             dni.setPreferredSize(new Dimension(200, 30));
-            labelMessage = new JLabel(message);
+            labelMessage = new JLabel();
 
-         /* BUTTONS */
+            /* BUTTONS */
             JButton button = new JButton("Pedir Ticket");
 
-         /* ACTIONS */
+            /* ACTIONS */
             button.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
@@ -52,7 +55,7 @@ public class JFrameT extends JFrame {
                 }
             });
 
-         /* ADDS */
+            /* ADDS */
             gbc.gridx = 0;
             gbc.gridy = 0;
             gbc.anchor = GridBagConstraints.LINE_END;
@@ -77,8 +80,8 @@ public class JFrameT extends JFrame {
 
             add(panel);
 
-         /* CONFIGS */
-            setTitle("Tickets");
+            /* CONFIGS */
+            setTitle("TICKETS " + config.getProperty("ticket.name"));
             setSize(400, 200);
             setMinimumSize(new Dimension(300, 200));
             setLocationRelativeTo(null);
@@ -87,22 +90,23 @@ public class JFrameT extends JFrame {
                 @Override
                 public void windowClosing(WindowEvent e) {
                         try {
-                            output.writeUTF("CLOSE_TICKET_PLATFORM" + "/" + index);
-                            output.flush();
-                        } catch (IOException e1) {
+                            sendMessage("Close");
+                        } catch (Exception e1) {
                             System.err.println("Error al enviar el mensaje: " + e1.getMessage());
                             e1.printStackTrace();
                         } finally {
                             closeResources();
                             dispose();
                         }
-                        dispose();
                 }
             });
             setVisible(true);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+        } catch (EOFException e) {
+            System.err.println("Server closed the connection unexpectedly.");
+            closeResources();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void onSubmit(JTextField field) {
@@ -112,9 +116,40 @@ public class JFrameT extends JFrame {
         }
 
         try {
-            output.writeUTF("DNI_REQUEST" + "/" + field.getText());
-            labelMessage.setText(input.readUTF());
+            createTicket(field.getText());
         } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendMessage(String message) {
+        try {
+            socket = new Socket(config.getProperty("control.server"),Integer.parseInt(config.getProperty("control.port")));
+            output = new ObjectOutputStream(socket.getOutputStream());
+            input = new ObjectInputStream(socket.getInputStream());
+
+            client.setMessage(message);
+            output.writeObject(client);
+            output.flush();
+        } catch (IOException e) {
+            System.err.println("IO Error: " + e.getMessage());
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void createTicket(String dni) {
+        try {
+            sendMessage("GetDNI/" + dni);
+            Ticket res = (Ticket) input.readObject();
+            if(res.getClient() != null) {
+                labelMessage.setText("BIENVENID@ " + res.getClient().getName() + " TU TICKET ES " + res.getName());
+            } else {
+                labelMessage.setText(res.getTickets().getMessage());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -122,7 +157,7 @@ public class JFrameT extends JFrame {
         try {
             if (output != null) output.close();
             if (input != null) input.close();
-            if (socket != null) socket.close();
+            if (socket != null && !socket.isClosed()) socket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }

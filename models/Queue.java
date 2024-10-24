@@ -1,4 +1,4 @@
-package control.model;
+package models;
 
 public class Queue {
     private Object[] objects;

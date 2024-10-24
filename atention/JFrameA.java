@@ -2,68 +2,106 @@ package atention;
 
 import javax.swing.*;
 
-import atention.utils.ConfigLoader;
+import utils.ConfigLoader;
+import types.Atention;
+import types.Ticket;
+import types.Tickets;
 
+import java.net.InetAddress;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.*;
 import java.net.Socket;
-
-
+import java.util.ArrayList;
 
 public class JFrameA extends JFrame {
     private static ConfigLoader config = new ConfigLoader("atention/config/config.properties");
+    
     private Socket socket;
-    private DataOutputStream output;
-    private DataInputStream input;
-    private int index;
+    private ObjectOutputStream output;
+    private ObjectInputStream input;
+
     private JLabel labelMessage;
     private JButton buttonMessage;
+    private static JPanel panel = new JPanel(new GridBagLayout());
+    private static GridBagConstraints gbc = new GridBagConstraints();
+
+    private static Atention client;
+    private ArrayList<Ticket> tickets = new ArrayList<Ticket>();
+
+    public ArrayList<Ticket> getTickets() {
+        try {
+            sendMessage("GetTickets");
+            Object readObject = input.readObject();
+
+            if (readObject instanceof ArrayList<?>) {
+                ArrayList<?> rawList = (ArrayList<?>) readObject;
+                ArrayList<Ticket> safeTickets = new ArrayList<>();
+                for (Object item : rawList) if (item instanceof Ticket) safeTickets.add((Ticket) item);
+                tickets = safeTickets;
+            }
+            if (tickets.isEmpty()) {
+                ArrayList<Ticket> defaultTicket = new ArrayList<>();
+                defaultTicket.add(new Ticket(new Tickets("19", "si", "nose"), client, null, "None"));
+                return defaultTicket;
+            }
+            System.out.println(tickets.size());
+            return tickets;
+        } catch (ClassNotFoundException e) {
+            System.err.println("Class not found during deserialization: " + e.getMessage());
+        } catch (IOException e) {
+            System.err.println("I/O error during deserialization: " + e.getMessage());
+        }
+        return tickets;
+    }
+
+    private void updateTickets() {
+        panel.removeAll();
+        getTickets();
+        int index = 0;
+        for (Ticket ticket : tickets) {
+            labelMessage = new JLabel(ticket.getName() != null ? ticket.getName() : "NO EXISTE");
+            gbc.gridx = 0;
+            gbc.gridy = index;
+            buttonMessage = new JButton("Atender Ticket");
+            panel.add(labelMessage, gbc);
+            gbc.gridx = 1;
+            panel.add(buttonMessage, gbc);
+            index++;
+        }
+        gbc.gridx = 0;
+        gbc.gridy = index;
+        gbc.anchor = GridBagConstraints.LINE_START;
+        buttonMessage = new JButton("Actualizar");
+        panel.add(buttonMessage, gbc);
+        add(panel);
+        revalidate();
+        repaint();
+    }
 
     public void initialize() {
         try {
-            socket = new Socket(config.getProperty("control.server"),Integer.parseInt(config.getProperty("control.port")));
-            output = new DataOutputStream(socket.getOutputStream());
-            input = new DataInputStream(socket.getInputStream());
-            output.writeUTF("NEW_ATENTION_PLATFORM" + "/" + config.getProperty("atention.name"));
-            index = Integer.parseInt(input.readUTF());
+            String ip = InetAddress.getLocalHost().getHostAddress();
+            client = new Atention(ip, config.getProperty("atention.name"), null);
+            sendMessage("Initialize");
 
-            output.writeUTF("GET_QUEUE");
-            String queueString = input.readUTF();
-            
+            int res = (int) input.readObject();
+            if(res == 0) return;
 
-        /* PANEL */
-            JPanel panel = new JPanel(new GridBagLayout());
-            GridBagConstraints gbc = new GridBagConstraints();
+            /* PANEL */
             gbc.insets = new Insets(10, 10, 10, 10);
 
-         /* LABELS AND FIELDS */
+            /* LABELS AND FIELDS */
 
-         /* BUTTONS */
+            /* BUTTONS */
 
-         /* ACTIONS */
+            /* ACTIONS */
 
-         /* ADDS */
-            if(queueString.length() > 0) {
-                String[] queue = queueString.split(",");
-                for (String string : queue) {
-                    String[] values = string.split(":");
-                    labelMessage = new JLabel(values[0]);
-                    gbc.gridx = 0;
-                    gbc.gridy = Integer.parseInt(values[1]);
-                    buttonMessage = new JButton("Atender Ticket");
-                    panel.add(labelMessage, gbc);
-                    gbc.gridx = 1;
-                    panel.add(buttonMessage, gbc);
-                }
-            } else {
-                JLabel asd = new JLabel("Libre");
-                panel.add(asd);
-            }
-            add(panel);
+            /* ADDS */
+            updateTickets();
 
-         /* CONFIGS */
-            setTitle("Atención");
+            /* CONFIGS */
+            setTitle("ATENCION " + config.getProperty("atention.name"));
             setSize(400, 200);
             setMinimumSize(new Dimension(300, 200));
             setLocationRelativeTo(null);
@@ -72,8 +110,8 @@ public class JFrameA extends JFrame {
                 @Override
                 public void windowClosing(WindowEvent e) {
                         try {
-                            output.writeUTF("CLOSE_ATENTION_PLATFORM" + "/" + Integer.toString(index));
-                        } catch (IOException e1) {
+                            sendMessage("Close");
+                        } catch (Exception e1) {
                             System.err.println("Error al enviar el mensaje: " + e1.getMessage());
                             e1.printStackTrace();
                         } finally {
@@ -84,16 +122,31 @@ public class JFrameA extends JFrame {
                 }
             });
             setVisible(true);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendMessage(String message){
+        try {
+            socket = new Socket(config.getProperty("control.server"),Integer.parseInt(config.getProperty("control.port")));
+            output = new ObjectOutputStream(socket.getOutputStream());
+            input = new ObjectInputStream(socket.getInputStream());
+
+            client.setMessage(message);
+            output.writeObject(client);
+            output.flush();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void closeResources() {
         try {
             if (output != null) output.close();
-            if (socket != null) socket.close();
-        } catch (IOException e) {
+            if (input != null) input.close();
+            if (socket != null && !socket.isClosed()) socket.close();
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

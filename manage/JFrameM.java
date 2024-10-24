@@ -2,32 +2,58 @@ package manage;
 
 import javax.swing.*;
 
-import tickets.utils.ConfigLoader;
+import types.Atention;
+import types.AtentionAvaliable;
+import types.Manage;
+import utils.ConfigLoader;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.io.DataOutputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
+import java.util.ArrayList;
+
+import java.net.InetAddress;
 
 public class JFrameM extends JFrame {
     private static ConfigLoader config = new ConfigLoader("manage/config/config.properties");
+    
     private Socket socket;
-    private DataOutputStream output;
-    private DataInputStream input;
-    private int index;
+    private ObjectOutputStream output;
+    private ObjectInputStream input;
+
     private JLabel labelMessage;
+
+    private Manage client;
+
+    @SuppressWarnings("unchecked")
+    public ArrayList<AtentionAvaliable> getData(){
+        try {
+            sendMessage("GetQueue");
+            ObjectInputStream objectInput= new ObjectInputStream(socket.getInputStream());
+            ArrayList<AtentionAvaliable> atentions = (ArrayList<AtentionAvaliable>) objectInput.readObject();
+
+            if(atentions.size() < 1){
+                ArrayList<AtentionAvaliable> atention = new ArrayList<AtentionAvaliable>();
+                atention.add(new AtentionAvaliable(new Atention("NO EXISTE", "NO EXISTE", "NO EXISTE")));
+                return atention;
+            }
+            return atentions;
+        } catch (Exception e) {
+            ArrayList<AtentionAvaliable> atention = new ArrayList<AtentionAvaliable>();
+            atention.add(new AtentionAvaliable(new Atention("ERROR", "ERROR", "ERROR")));
+            return atention;
+        }
+    }
 
     public void initialize() {
         try {
-            socket = new Socket(config.getProperty("control.server"),Integer.parseInt(config.getProperty("control.port")));
-            output = new DataOutputStream(socket.getOutputStream());
-            input = new DataInputStream(socket.getInputStream());
+            String ip = InetAddress.getLocalHost().getHostAddress();
+            client = new Manage(ip, config.getProperty("manage.name"), null);
+            sendMessage("Initialize");
 
-            output.writeUTF("GET_ATENTIONS_PLATFORM");
-            String atentionString = input.readUTF();
-            String[] atentions = atentionString.split(",");
+            int res = (int) input.readObject();
+            if(res == 0) return;
 
          /* PANEL */
             JPanel panel = new JPanel(new GridBagLayout());
@@ -41,19 +67,21 @@ public class JFrameM extends JFrame {
          /* ACTIONS */
 
          /* ADDS */
-            for (String string : atentions) {
-                String[] values = string.split(":");
-                labelMessage = new JLabel(values[0] + ":" + values[2]);
+            ArrayList<AtentionAvaliable> queue = getData();
+            int index = 0;
+            for (AtentionAvaliable string : queue) {
+                labelMessage = new JLabel(string.getAtention().getName() + ":" + string.getTicket());
                 gbc.gridx = 0;
-                gbc.gridy = Integer.parseInt(values[1]);
+                gbc.gridy = index;
                 gbc.gridwidth = 2;
                 gbc.anchor = GridBagConstraints.CENTER;
                 panel.add(labelMessage, gbc);
+                index++;
             }
             add(panel);
 
          /* CONFIGS */
-            setTitle("Manage");
+            setTitle("MANAGE " + config.getProperty("manage.name"));
             setSize(400, 200);
             setMinimumSize(new Dimension(300, 200));
             setLocationRelativeTo(null);
@@ -62,9 +90,8 @@ public class JFrameM extends JFrame {
                 @Override
                 public void windowClosing(WindowEvent e) {
                         try {
-                            output.writeUTF("CLOSE_TICKET_PLATFORM" + "/" + index);
-                            output.flush();
-                        } catch (IOException e1) {
+                            sendMessage("Close");
+                        } catch (Exception e1) {
                             System.err.println("Error al enviar el mensaje: " + e1.getMessage());
                             e1.printStackTrace();
                         } finally {
@@ -75,6 +102,20 @@ public class JFrameM extends JFrame {
                 }
             });
             setVisible(true);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendMessage(String message) {
+        try {
+            socket = new Socket(config.getProperty("control.server"),Integer.parseInt(config.getProperty("control.port")));
+            output = new ObjectOutputStream(socket.getOutputStream());
+            input = new ObjectInputStream(socket.getInputStream());
+
+            client.setMessage(message);
+            output.writeObject(client);
+            output.flush();
         } catch (Exception e) {
             e.printStackTrace();
         }
