@@ -6,9 +6,9 @@ public class ClientBase implements Serializable{
     protected String type;
     protected String ip;
     protected String name;
-    protected String message;
+    protected Message message;
 
-    public ClientBase(String type, String ip, String name, String message){
+    public ClientBase(String type, String ip, String name, Message message){
         this.type = type;
         this.ip = ip;
         this.name = name;
@@ -31,11 +31,11 @@ public class ClientBase implements Serializable{
         return this.name;
     }
 
-    public String getMessage() {
+    public Message getMessage() {
         return this.message;
     }
 
-    public void setMessage(String message) {
+    public void setMessage(Message message) {
         this.message = message;
     }
 }

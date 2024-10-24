@@ -2,10 +2,10 @@ package atention;
 
 import javax.swing.*;
 
+import models.Message;
 import utils.ConfigLoader;
 import types.Atention;
 import types.Ticket;
-import types.Tickets;
 
 import java.net.InetAddress;
 import java.awt.*;
@@ -31,7 +31,7 @@ public class JFrameA extends JFrame {
 
     public ArrayList<Ticket> getTickets() {
         try {
-            sendMessage("GetTickets");
+            sendMessage("GetTickets", null);
             Object readObject = input.readObject();
 
             if (readObject instanceof ArrayList<?>) {
@@ -40,17 +40,11 @@ public class JFrameA extends JFrame {
                 for (Object item : rawList) if (item instanceof Ticket) safeTickets.add((Ticket) item);
                 tickets = safeTickets;
             }
-            if (tickets.isEmpty()) {
-                ArrayList<Ticket> defaultTicket = new ArrayList<>();
-                defaultTicket.add(new Ticket(new Tickets("19", "si", "nose"), client, null, "None"));
-                return defaultTicket;
-            }
-            System.out.println(tickets.size());
             return tickets;
         } catch (ClassNotFoundException e) {
-            System.err.println("Class not found during deserialization: " + e.getMessage());
+            e.printStackTrace();
         } catch (IOException e) {
-            System.err.println("I/O error during deserialization: " + e.getMessage());
+            e.printStackTrace();
         }
         return tickets;
     }
@@ -64,6 +58,12 @@ public class JFrameA extends JFrame {
             gbc.gridx = 0;
             gbc.gridy = index;
             buttonMessage = new JButton("Atender Ticket");
+            buttonMessage.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    onSubmit(ticket);
+                } 
+            });
             panel.add(labelMessage, gbc);
             gbc.gridx = 1;
             panel.add(buttonMessage, gbc);
@@ -73,17 +73,27 @@ public class JFrameA extends JFrame {
         gbc.gridy = index;
         gbc.anchor = GridBagConstraints.LINE_START;
         buttonMessage = new JButton("Actualizar");
+        buttonMessage.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                updateTickets();
+            } 
+        });
         panel.add(buttonMessage, gbc);
         add(panel);
         revalidate();
         repaint();
     }
 
+    public void onSubmit(Ticket ticket) {
+        sendMessage("ClaimTicket", ticket);
+    }
+
     public void initialize() {
         try {
             String ip = InetAddress.getLocalHost().getHostAddress();
-            client = new Atention(ip, config.getProperty("atention.name"), null);
-            sendMessage("Initialize");
+            client = new Atention(ip, config.getProperty("atention.name"), new Message(null, null));
+            sendMessage("Initialize", null);
 
             int res = (int) input.readObject();
             if(res == 0) return;
@@ -110,7 +120,7 @@ public class JFrameA extends JFrame {
                 @Override
                 public void windowClosing(WindowEvent e) {
                         try {
-                            sendMessage("Close");
+                            sendMessage("Close", null);
                         } catch (Exception e1) {
                             System.err.println("Error al enviar el mensaje: " + e1.getMessage());
                             e1.printStackTrace();
@@ -127,13 +137,14 @@ public class JFrameA extends JFrame {
         }
     }
 
-    private void sendMessage(String message){
+    private void sendMessage(String message, Object object){
         try {
             socket = new Socket(config.getProperty("control.server"),Integer.parseInt(config.getProperty("control.port")));
             output = new ObjectOutputStream(socket.getOutputStream());
             input = new ObjectInputStream(socket.getInputStream());
-
-            client.setMessage(message);
+            
+            client.getMessage().setMessage(message);
+            client.getMessage().setObject(object);
             output.writeObject(client);
             output.flush();
         } catch (Exception e) {

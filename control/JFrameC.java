@@ -4,6 +4,8 @@ import java.net.ServerSocket;
 import java.net.InetAddress;
 import java.net.Socket;
 import javax.swing.*;
+
+import models.Message;
 import types.Atention;
 import types.Manage;
 import utils.ClientDataProcessor;
@@ -26,7 +28,6 @@ public class JFrameC extends JFrame{
     private static int port = Integer.parseInt(config.getProperty("control.port"));
     
     private String ip;
-    //private static Queue queue = new Queue(length);
 
     private ArrayList<Atention> atention_connects = new ArrayList<Atention>();
     private ArrayList<Tickets> ticket_connects = new ArrayList<Tickets>();
@@ -42,9 +43,6 @@ public class JFrameC extends JFrame{
     private JLabel labelQueueCountResponse;
 
     public void initialize() {
-        for (int i = 0; i < 10; i++) {
-                tickets.add(new Ticket(new Tickets("19", "Si" + i, "nose"), null, new types.Client(i, "Nombre" + i, "Apellido" + i, "Fecha" + i), "T" + i));
-        }
         try (ServerSocket server = new ServerSocket(port)){
             /* PANEL */
             JPanel panel = new JPanel(new GridBagLayout());
@@ -236,23 +234,29 @@ public class JFrameC extends JFrame{
 
     public Ticket createTicket(int dni, Tickets ticket) {
         Client clientResponse = reqClient(dni);
-        Ticket newTicket = new Ticket(new Tickets(null, null, null), null, null, null);
+        Ticket newTicket = new Ticket(new Tickets(null, null, new Message(null, null)), null, null, null);
 
         if (clientResponse == null) {
-            newTicket.getTickets().setMessage("EL CLIENTE NO EXISTE");
+            newTicket.getTickets().getMessage().setMessage("EL CLIENTE NO EXISTE");
             return newTicket;
         }
-
+        int enableTickets = 0;
         for (Ticket tkt : tickets) {
+            if(tkt.getAtention() == null) enableTickets++;
             if (tkt.getClient().getDNI() == dni) {
                 LocalDateTime lastTicketTime = tkt.getCreateAt();
                 Duration duration = Duration.between(lastTicketTime, LocalDateTime.now());
     
                 if (duration.toMinutes() < 5) {
-                    newTicket.getTickets().setMessage("YA TIENES UN TICKET, DEBES ESPERAR AL MENOS 5 MINUTOS PARA SACAR OTRO");
+                    newTicket.getTickets().getMessage().setMessage("YA TIENES UN TICKET, DEBES ESPERAR AL MENOS 5 MINUTOS PARA SACAR OTRO");
                     return newTicket;
                 }
             }
+        }
+
+        if(enableTickets >= Integer.parseInt(config.getProperty("queue.size"))) {
+            newTicket.getTickets().getMessage().setMessage("EL LÍMITE DE PERSONAS EN COLA HA SIDO SUPERADO, POR FAVOR ESPERE UNOS MINUTOS");
+            return newTicket;
         }
 
         String name = "T-" + tickets.size();
@@ -264,7 +268,23 @@ public class JFrameC extends JFrame{
     
 
     public ArrayList<Ticket> getTickets() {
-        System.out.println(tickets.size());
-        return tickets;
+        ArrayList<Ticket> filterTickets = new ArrayList<Ticket>();
+        for (Ticket ticket : tickets) {
+            if(ticket.getAtention() == null) {
+                filterTickets.add(ticket);
+            }
+        }
+        return filterTickets;
+    }
+
+    public int claimTicket(Atention atention, Ticket ticket) {
+        for (Ticket tkt : tickets) {
+            if(tkt.getName().equals(ticket.getName())) {
+                tkt.setAtention(atention);
+                tkt.setName(tkt.getName() + " ATENDIDO POR: " + atention.getName());
+                return 1;
+            }
+        }
+        return 0;
     }
 }

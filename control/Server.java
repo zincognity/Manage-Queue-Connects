@@ -13,6 +13,7 @@ import java.io.*;
 import models.ClientBase;
 import types.Atention;
 import types.Manage;
+import types.Ticket;
 import types.Tickets;
 
 public class Server implements Runnable{
@@ -21,12 +22,10 @@ public class Server implements Runnable{
     private JFrameC window;
     private ObjectOutputStream output;
     private ObjectInputStream input;
-    //private Queue queue;
     private static Map<String, List<ClientBase>> clients = new HashMap<String, List<ClientBase>>();
     
     public Server(Socket socket, JFrameC window) {
         this.socket = socket;
-        //this.queue = queue;
         this.window = window;
     }
 
@@ -66,7 +65,7 @@ public class Server implements Runnable{
         try {
             newClient = (ClientBase) input.readObject();
             System.out.println(newClient.getType() + newClient.getIP() + newClient.getMessage());
-            handleMessage(newClient.getType(), newClient.getMessage(), newClient);
+            handleMessage(newClient);
 
             synchronized (clients) {
                 clients.putIfAbsent(newClient.getType() + "/" + newClient.getIP() + "/" + newClient.getName(), new ArrayList<>());
@@ -80,13 +79,6 @@ public class Server implements Runnable{
         } catch (IOException | ClassNotFoundException e) {
             System.out.println("Error al manejar cliente: " + e.getMessage());
         } finally {
-            //if (newClient != null) {
-            //    synchronized (clients) {
-            //        clients.get(newClient.getType()).remove(newClient);
-            //        System.out.println("Cliente de tipo '" + newClient.getType() + "' desconectado. Total en este tipo: " + clients.get(newClient.getType()).size());
-            //        printClientCounts();
-            //    }
-            //}
             try {
                 clientSocket.close();
             } catch (IOException e) {
@@ -95,15 +87,18 @@ public class Server implements Runnable{
         }
     }
 
-    private void handleMessage(String type, String message, ClientBase object) {
-        switch (type) {
+    private void handleMessage(ClientBase object) {
+        switch ((String) object.getType()) {
             case "ATENTION":
-                switch (message) {
+                switch ((String) object.getMessage().getMessage()) {
                     case "Initialize":
                         sendObject(window.addAtention((Atention) object));
                         break;
                     case "GetTickets":
                         sendObject(window.getTickets());
+                        break;
+                    case "ClaimTicket":
+                        sendObject(window.claimTicket((Atention) object, (Ticket) object.getMessage().getObject()));
                         break;
                     case "Close":
                         sendMessage(Integer.toString(window.removeAtention((Atention) object)));
@@ -114,7 +109,7 @@ public class Server implements Runnable{
                 }
                 break;
             case "MANAGE":
-                switch (message) {
+                switch ((String) object.getMessage().getMessage()) {
                     case "Initialize":
                         sendObject(window.addManage((Manage) object));
                         break;
@@ -130,21 +125,12 @@ public class Server implements Runnable{
                 }
                 break;
             case "TICKETS":
-                int dni = 0;
-                if (message.startsWith("GetDNI")) {
-                    String[] parts = message.split("/");
-                    message = "GetDNI";
-                    if (parts.length > 1) {
-                        dni = Integer.parseInt(parts[1]);
-                    }
-                }
-                switch (message) {
+                switch ((String) object.getMessage().getMessage()) {
                     case "Initialize":
                         sendObject(window.addTicket((Tickets) object));
                         break;
                     case "GetDNI":
-                        System.out.println("PASO DNI");
-                        sendObject(window.createTicket(dni, (Tickets) object));
+                        sendObject(window.createTicket((int) object.getMessage().getObject(), (Tickets) object));
                         break;
                     case "Close":
                         sendObject(window.removeTicket((Tickets) object));

@@ -26,12 +26,24 @@ public class Ticket implements Serializable {
         return this.atention;
     }
 
+    public void setAtention(Atention atention) {
+        this.atention = atention;
+    }
+
     public Client getClient() {
         return this.client;
     }
 
+    public void setClient(Client client) {
+        this.client = client;
+    }
+
     public String getName() {
         return this.name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public LocalDateTime getCreateAt() {

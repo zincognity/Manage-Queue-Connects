@@ -2,7 +2,7 @@ package manage;
 
 import javax.swing.*;
 
-import types.Atention;
+import models.Message;
 import types.AtentionAvaliable;
 import types.Manage;
 import utils.ConfigLoader;
@@ -29,19 +29,19 @@ public class JFrameM extends JFrame {
     @SuppressWarnings("unchecked")
     public ArrayList<AtentionAvaliable> getData(){
         try {
-            sendMessage("GetQueue");
+            sendMessage("GetQueue", null);
             ObjectInputStream objectInput= new ObjectInputStream(socket.getInputStream());
             ArrayList<AtentionAvaliable> atentions = (ArrayList<AtentionAvaliable>) objectInput.readObject();
 
-            if(atentions.size() < 1){
-                ArrayList<AtentionAvaliable> atention = new ArrayList<AtentionAvaliable>();
-                atention.add(new AtentionAvaliable(new Atention("NO EXISTE", "NO EXISTE", "NO EXISTE")));
-                return atention;
-            }
+            //if(atentions.size() < 1){
+            //    ArrayList<AtentionAvaliable> atention = new ArrayList<AtentionAvaliable>();
+            //    atention.add(new AtentionAvaliable(new Atention("NO EXISTE", "NO EXISTE", "NO EXISTE"), null));
+            //    return atention;
+            //}
             return atentions;
         } catch (Exception e) {
             ArrayList<AtentionAvaliable> atention = new ArrayList<AtentionAvaliable>();
-            atention.add(new AtentionAvaliable(new Atention("ERROR", "ERROR", "ERROR")));
+            //atention.add(new AtentionAvaliable(new Atention("ERROR", "ERROR", "ERROR"), null));
             return atention;
         }
     }
@@ -49,8 +49,8 @@ public class JFrameM extends JFrame {
     public void initialize() {
         try {
             String ip = InetAddress.getLocalHost().getHostAddress();
-            client = new Manage(ip, config.getProperty("manage.name"), null);
-            sendMessage("Initialize");
+            client = new Manage(ip, config.getProperty("manage.name"), new Message(null, null));
+            sendMessage("Initialize", null);
 
             int res = (int) input.readObject();
             if(res == 0) return;
@@ -90,7 +90,7 @@ public class JFrameM extends JFrame {
                 @Override
                 public void windowClosing(WindowEvent e) {
                         try {
-                            sendMessage("Close");
+                            sendMessage("Close", null);
                         } catch (Exception e1) {
                             System.err.println("Error al enviar el mensaje: " + e1.getMessage());
                             e1.printStackTrace();
@@ -107,13 +107,14 @@ public class JFrameM extends JFrame {
         }
     }
 
-    private void sendMessage(String message) {
+    private void sendMessage(String message, Object object) {
         try {
             socket = new Socket(config.getProperty("control.server"),Integer.parseInt(config.getProperty("control.port")));
             output = new ObjectOutputStream(socket.getOutputStream());
             input = new ObjectInputStream(socket.getInputStream());
 
-            client.setMessage(message);
+            client.getMessage().setMessage(message);
+            client.getMessage().setObject(object);
             output.writeObject(client);
             output.flush();
         } catch (Exception e) {

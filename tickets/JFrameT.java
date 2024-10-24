@@ -3,6 +3,7 @@ package tickets;
 import javax.swing.*;
 
 import models.ClientBase;
+import models.Message;
 import types.Ticket;
 import types.Tickets;
 import utils.ConfigLoader;
@@ -28,8 +29,8 @@ public class JFrameT extends JFrame {
     public void initialize() {
         try {
             String ip = InetAddress.getLocalHost().getHostAddress();
-            client = new Tickets(ip, config.getProperty("ticket.name"), null);
-            sendMessage("Initialize");
+            client = new Tickets(ip, config.getProperty("ticket.name"), new Message(null, null));
+            sendMessage("Initialize", null);
 
             int res = (int) input.readObject();
             if(res == 0) return;
@@ -90,7 +91,7 @@ public class JFrameT extends JFrame {
                 @Override
                 public void windowClosing(WindowEvent e) {
                         try {
-                            sendMessage("Close");
+                            sendMessage("Close", null);
                         } catch (Exception e1) {
                             System.err.println("Error al enviar el mensaje: " + e1.getMessage());
                             e1.printStackTrace();
@@ -122,13 +123,14 @@ public class JFrameT extends JFrame {
         }
     }
 
-    private void sendMessage(String message) {
+    private void sendMessage(String message, Object object) {
         try {
             socket = new Socket(config.getProperty("control.server"),Integer.parseInt(config.getProperty("control.port")));
             output = new ObjectOutputStream(socket.getOutputStream());
             input = new ObjectInputStream(socket.getInputStream());
 
-            client.setMessage(message);
+            client.getMessage().setMessage(message);
+            client.getMessage().setObject(object);
             output.writeObject(client);
             output.flush();
         } catch (IOException e) {
@@ -141,12 +143,12 @@ public class JFrameT extends JFrame {
 
     private void createTicket(String dni) {
         try {
-            sendMessage("GetDNI/" + dni);
+            sendMessage("GetDNI", Integer.parseInt(dni));
             Ticket res = (Ticket) input.readObject();
             if(res.getClient() != null) {
                 labelMessage.setText("BIENVENID@ " + res.getClient().getName() + " TU TICKET ES " + res.getName());
             } else {
-                labelMessage.setText(res.getTickets().getMessage());
+                labelMessage.setText((String) res.getTickets().getMessage().getMessage());
             }
         } catch (Exception e) {
             e.printStackTrace();
