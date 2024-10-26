@@ -3,73 +3,218 @@ package control;
 import java.net.ServerSocket;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import javax.swing.*;
 
-import models.Message;
-import types.Atention;
-import types.Manage;
+import control.utils.AtentionManage;
+import control.utils.ManageManage;
+import control.utils.TicketManage;
+import control.utils.TicketsManage;
+import control.views.MenuBar;
+import control.views.ServerData;
 import utils.ClientDataProcessor;
 import utils.ConfigLoader;
-import types.Tickets;
 import java.awt.*;
-import java.util.ArrayList;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.List;
-import types.Ticket;
 import types.Client;
-import java.time.Duration;
-import java.time.LocalDateTime;
+import java.io.*;
 
-public class JFrameC extends JFrame{
+public class JFrameC extends JFrame {
     /* CONFIG */
     private static final String DATA_FILE_PATH = "control/data/clients.csv";
-    private static ClientDataProcessor dataProcessor = new ClientDataProcessor();
     private static ConfigLoader config = new ConfigLoader("control/config/config.properties");
-    private static int length = Integer.parseInt(config.getProperty("queue.size"));
-    private static int port = Integer.parseInt(config.getProperty("control.port"));
-    
+
+    private int port = Integer.parseInt(config.getProperty("control.port"));
+    private int queueMax = Integer.parseInt(config.getProperty("queue.size"));
+
     private String ip;
 
-    private ArrayList<Atention> atention_connects = new ArrayList<Atention>();
-    private ArrayList<Tickets> ticket_connects = new ArrayList<Tickets>();
-    private ArrayList<Manage> manage_connects = new ArrayList<Manage>();
+    private ServerSocket server;
+    private boolean isRunning = false;
 
-    private List<types.Client> clients = dataProcessor.loadClients(DATA_FILE_PATH);
+    private GridBagConstraints gbc = new GridBagConstraints();;
+    private ServerData serverData = new ServerData(gbc);
+    private List<Client> clients = new ClientDataProcessor().loadClients(DATA_FILE_PATH);
 
-    private ArrayList<Ticket> tickets = new ArrayList<Ticket>();
+    private AtentionManage atentions_connects = new AtentionManage(serverData);
+    private TicketManage ticket_connects = new TicketManage(serverData);
+    private ManageManage manage_connects = new ManageManage(serverData);
+    private TicketsManage tickets = new TicketsManage(serverData, clients);
 
-    private JLabel labelManageResponse;
-    private JLabel labelTicketsResponse;
-    private JLabel labelAtentionsResponse;
-    private JLabel labelQueueCountResponse;
+    private JPanel panel;
+    protected JButton buttonUpdate;
+    private MenuBar menuBar = new MenuBar();
+
+    public List<Client> getClients() {
+        return this.clients;
+    }
+
+    public AtentionManage getAtentionManage() {
+        return this.atentions_connects;
+    }
+
+    public TicketManage getTicketManage() {
+        return this.ticket_connects;
+    }
+
+    public ManageManage getManageManage() {
+        return this.manage_connects;
+    }
+
+    public TicketsManage getTicketsManage() {
+        return this.tickets;
+    }
+
+    public int getQueueMax() {
+        return this.queueMax;
+    }
+
+    private void printMenu() {
+        menuBar.getConfigMenu().addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                showConfig();
+            }
+        });
+
+        menuBar.getStartServer().addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                startServer();
+            }
+        });
+        menuBar.getRestartServer().addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                restartServer();
+            }
+        });
+        menuBar.getStopServer().addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                stopServer();
+            }
+        });
+        setJMenuBar(menuBar);
+    }
+
+    private void updateData() {
+        serverData.getLabelIP().setText(ip);
+        serverData.getLabelPort().setText(Integer.toString(port));
+        serverData.getLabelQueueSizeMax().setText(Integer.toString(queueMax));
+        if (panel != null)
+            remove(panel);
+        if (serverData != null)
+            remove(serverData);
+        add(serverData);
+        revalidate();
+        repaint();
+    }
+
+    private void showConfig() {
+        String result;
+        do {
+            result = JOptionPane.showInputDialog("Ingresa el puerto del servidor:");
+            try {
+                port = Integer.parseInt(result);
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(null, "Por favor, ingresa un número entero válido.");
+            }
+        } while (port == -1);
+    }
+
+    private void startServer() {
+        new Thread(() -> {
+            try {
+                if (server == null || server.isClosed()) {
+                    server = new ServerSocket(port);
+                    isRunning = true;
+                    updateData();
+                    menuBar.getStartServer().setEnabled(false);
+                    menuBar.getRestartServer().setEnabled(true);
+                    menuBar.getStopServer().setEnabled(true);
+
+                    while (isRunning) {
+                        try {
+                            Socket socket = server.accept();
+                            new Thread(new Server(socket, this)).start();
+                        } catch (SocketException e) {
+                            if (!isRunning) {
+                                printMessage("El servidor no iniciado");
+                            } else {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    private void restartServer() {
+        new Thread(() -> {
+            stopServer();
+            try {
+                Thread.sleep(3000);
+                startServer();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    private void stopServer() {
+        isRunning = false;
+        if (server != null && !server.isClosed()) {
+            try {
+                server.close();
+                menuBar.getStartServer().setEnabled(true);
+                menuBar.getRestartServer().setEnabled(false);
+                menuBar.getStopServer().setEnabled(false);
+                printMessage("El servidor se ha detenido");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void printMessage(String message) {
+        if (serverData != null)
+            remove(serverData);
+        if (panel != null)
+            remove(panel);
+
+        panel = new JPanel(new GridBagLayout());
+        gbc.insets = new Insets(10, 10, 10, 10);
+
+        /* LABELS AND FIELDS */
+        JLabel labelIP = new JLabel(message);
+
+        /* ADDS */
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.LINE_START;
+        panel.add(labelIP, gbc);
+
+        add(panel);
+        revalidate();
+        repaint();
+    }
 
     public void initialize() {
-        try (ServerSocket server = new ServerSocket(port)){
+        try {
             /* PANEL */
-            JPanel panel = new JPanel(new GridBagLayout());
-            GridBagConstraints gbc = new GridBagConstraints();
+            panel = new JPanel(new GridBagLayout());
             gbc.insets = new Insets(10, 10, 10, 10);
 
             ip = InetAddress.getLocalHost().getHostAddress();
+            menuBar.getStopServer().setEnabled(false);
+            menuBar.getRestartServer().setEnabled(false);
 
             /* LABELS AND FIELDS */
-            JLabel labelIP = new JLabel("DIRECCIÓN IP:");
-            JLabel labelIPResponse = new JLabel(ip);
-            JLabel labelPort = new JLabel("PUERTO:");
-            JLabel labelPortResponse = new JLabel(Integer.toString(port));
-            JLabel labelMax = new JLabel("TAMAÑO MÁXIMO DE LA COLA:");
-            JLabel labelMaxResponse = new JLabel(Integer.toString(length));
-            JLabel labelCount = new JLabel("PERSONAS EN LA COLA:");
-            labelQueueCountResponse = new JLabel("1");
-            JLabel labelManage = new JLabel("PANTALLAS TRABAJANDO");
-            labelManageResponse = new JLabel(Integer.toString(manage_connects.size()));
-            JLabel labelTickets = new JLabel("TICKETS TRABAJANDO:");
-            labelTicketsResponse = new JLabel(Integer.toString(ticket_connects.size()));
-            JLabel labelAtentions = new JLabel("ATENCIONES TRABAJANDO:");
-            labelAtentionsResponse = new JLabel(Integer.toString(atention_connects.size()));
+            JLabel labelIP = new JLabel("El servidor no ha iniciado.");
 
-            /* BUTTONS */
-
-            /* ACTIONS */
+            printMenu();
 
             /* ADDS */
             gbc.gridx = 0;
@@ -77,214 +222,18 @@ public class JFrameC extends JFrame{
             gbc.anchor = GridBagConstraints.LINE_START;
             panel.add(labelIP, gbc);
 
-            gbc.gridx = 1;
-            gbc.gridy = 0;
-            gbc.anchor = GridBagConstraints.LINE_START;
-            panel.add(labelIPResponse, gbc);
-
-            gbc.gridx = 0;
-            gbc.gridy = 1;
-            gbc.anchor = GridBagConstraints.LINE_START;
-            panel.add(labelPort, gbc);
-
-            gbc.gridx = 1;
-            gbc.gridy = 1;
-            gbc.anchor = GridBagConstraints.LINE_START;
-            panel.add(labelPortResponse, gbc);
-
-            gbc.gridx = 0;
-            gbc.gridy = 2;
-            gbc.anchor = GridBagConstraints.LINE_START;
-            panel.add(labelMax, gbc);
-
-            gbc.gridx = 1;
-            gbc.gridy = 2;
-            gbc.anchor = GridBagConstraints.LINE_START;
-            panel.add(labelMaxResponse, gbc);
-
-            gbc.gridx = 0;
-            gbc.gridy = 3;
-            gbc.anchor = GridBagConstraints.LINE_START;
-            panel.add(labelCount, gbc);
-
-            gbc.gridx = 1;
-            gbc.gridy = 3;
-            gbc.anchor = GridBagConstraints.LINE_START;
-            panel.add(labelQueueCountResponse, gbc);
-
-            gbc.gridx = 0;
-            gbc.gridy = 4;
-            gbc.anchor = GridBagConstraints.LINE_START;
-            panel.add(labelAtentions, gbc);
-
-            gbc.gridx = 1;
-            gbc.gridy = 4;
-            gbc.anchor = GridBagConstraints.LINE_START;
-            panel.add(labelAtentionsResponse, gbc);
-
-            gbc.gridx = 0;
-            gbc.gridy = 5;
-            gbc.anchor = GridBagConstraints.LINE_START;
-            panel.add(labelTickets, gbc);
-
-            gbc.gridx = 1;
-            gbc.gridy = 5;
-            gbc.anchor = GridBagConstraints.LINE_START;
-            panel.add(labelTicketsResponse, gbc);
-
-            gbc.gridx = 0;
-            gbc.gridy = 6;
-            gbc.anchor = GridBagConstraints.LINE_START;
-            panel.add(labelManage, gbc);
-
-            gbc.gridx = 1;
-            gbc.gridy = 6;
-            gbc.anchor = GridBagConstraints.LINE_START;
-            panel.add(labelManageResponse, gbc);
-
             add(panel);
 
             /* CONFIGS */
             setTitle("Control");
             setSize(400, 800);
-            setMinimumSize(new Dimension(300, 200));
+            setMaximumSize(new Dimension(400, 800));
+            setMinimumSize(new Dimension(400, 800));
             setLocationRelativeTo(null);
             setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
             setVisible(true);
-
-            while(true) {
-                Socket socket = server.accept();
-                new Thread(new Server(socket, this)).start();
-            }
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    public int addManage(Manage manage) {
-        for (Manage mng : manage_connects) {
-            if(mng.getIP().equals(manage.getIP()) && mng.getName().equals(manage.getName())) {
-                return 0;
-            }
-        }
-        manage_connects.add(manage);
-        labelManageResponse.setText(Integer.toString(manage_connects.size()));
-        return 1;
-    }
-
-    public int removeManage(Manage manage) {
-        for (Manage mng : manage_connects) {
-            if(mng.getIP().equals(manage.getIP()) && mng.getName().equals(manage.getName())) {
-                manage_connects.remove(mng);
-                labelManageResponse.setText(Integer.toString(manage_connects.size()));
-            }
-        }
-        return manage_connects.size();
-    }
-
-    public int addAtention(Atention atention){
-        for (Atention atn : atention_connects) {
-            if(atn.getIP().equals(atention.getIP()) && atn.getName().equals(atention.getName())) {
-                return 0;
-            }
-        }
-        atention_connects.add(atention);
-        labelAtentionsResponse.setText(Integer.toString(atention_connects.size()));
-        return 1;
-    }
-
-    public int removeAtention(Atention atention){
-        for (Atention atn : atention_connects) {
-            if(atn.getIP().equals(atention.getIP()) && atn.getName().equals(atention.getName())) {
-                atention_connects.remove(atn);
-                labelAtentionsResponse.setText(Integer.toString(atention_connects.size()));
-            }
-        }
-        return atention_connects.size();
-    }
-
-    public int addTicket(Tickets ticket) {
-        for (Tickets tkt : ticket_connects) {
-            if(tkt.getIP().equals(ticket.getIP()) && tkt.getName().equals(ticket.getName())) {
-                return 0;
-            }
-        }
-        ticket_connects.add(ticket);
-        labelTicketsResponse.setText(Integer.toString(ticket_connects.size()));
-        return 1;
-    }
-
-    public int removeTicket(Tickets ticket) {
-        for (Tickets tkt : ticket_connects) {
-            if(tkt.getIP().equals(ticket.getIP()) && tkt.getName().equals(ticket.getName())) {
-                ticket_connects.remove(tkt);
-                labelTicketsResponse.setText(Integer.toString(ticket_connects.size()));
-            }
-        }
-        return ticket_connects.size();
-    }
-
-    public Client reqClient(int dni) {
-        Client clientRes = null;
-        for (Client clt : clients) {
-            if(clt.getDNI() == dni) clientRes = clt;
-        }
-        return clientRes;
-    }
-
-    public Ticket createTicket(int dni, Tickets ticket) {
-        Client clientResponse = reqClient(dni);
-        Ticket newTicket = new Ticket(new Tickets(null, null, new Message(null, null)), null, null, null);
-
-        if (clientResponse == null) {
-            newTicket.getTickets().getMessage().setMessage("EL CLIENTE NO EXISTE");
-            return newTicket;
-        }
-        int enableTickets = 0;
-        for (Ticket tkt : tickets) {
-            if(tkt.getAtention() == null) enableTickets++;
-            if (tkt.getClient().getDNI() == dni) {
-                LocalDateTime lastTicketTime = tkt.getCreateAt();
-                Duration duration = Duration.between(lastTicketTime, LocalDateTime.now());
-    
-                if (duration.toMinutes() < 5) {
-                    newTicket.getTickets().getMessage().setMessage("YA TIENES UN TICKET, DEBES ESPERAR AL MENOS 5 MINUTOS PARA SACAR OTRO");
-                    return newTicket;
-                }
-            }
-        }
-
-        if(enableTickets >= Integer.parseInt(config.getProperty("queue.size"))) {
-            newTicket.getTickets().getMessage().setMessage("EL LÍMITE DE PERSONAS EN COLA HA SIDO SUPERADO, POR FAVOR ESPERE UNOS MINUTOS");
-            return newTicket;
-        }
-
-        String name = "T-" + tickets.size();
-        newTicket = new Ticket(ticket, null, clientResponse, name);
-        tickets.add(newTicket);
-    
-        return newTicket;
-    }
-    
-
-    public ArrayList<Ticket> getTickets() {
-        ArrayList<Ticket> filterTickets = new ArrayList<Ticket>();
-        for (Ticket ticket : tickets) {
-            if(ticket.getAtention() == null) {
-                filterTickets.add(ticket);
-            }
-        }
-        return filterTickets;
-    }
-
-    public int claimTicket(Atention atention, Ticket ticket) {
-        for (Ticket tkt : tickets) {
-            if(tkt.getName().equals(ticket.getName())) {
-                tkt.setAtention(atention);
-                tkt.setName(tkt.getName() + " ATENDIDO POR: " + atention.getName());
-                return 1;
-            }
-        }
-        return 0;
     }
 }

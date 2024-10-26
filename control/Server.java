@@ -7,7 +7,6 @@ import java.util.Map;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import java.io.*;
 
 import models.ClientBase;
@@ -29,6 +28,10 @@ public class Server implements Runnable{
         this.window = window;
     }
 
+    public void serSocket(Socket socket) {
+        this.socket = socket;
+    }
+
     @Override
     public void run() {
         try {
@@ -37,17 +40,6 @@ public class Server implements Runnable{
             handleClient(socket);
         } catch (Exception e) {
             e.printStackTrace();
-        }
-    }
-
-    public void sendMessage(String message) {
-        try {
-            if (output != null) {
-                output.writeUTF(message);
-                output.flush();
-            }
-        } catch (IOException e) {
-            System.err.println("Error al enviar mensaje: " + e.getMessage());
         }
     }
 
@@ -60,7 +52,7 @@ public class Server implements Runnable{
         }
     }
 
-    private void handleClient(Socket clientSocket){
+    private void handleClient(Socket clientSocket) throws ClassNotFoundException, IOException{
         ClientBase newClient = null;
         try {
             newClient = (ClientBase) input.readObject();
@@ -77,12 +69,12 @@ public class Server implements Runnable{
                 printClientCounts();
             }
         } catch (IOException | ClassNotFoundException e) {
-            System.out.println("Error al manejar cliente: " + e.getMessage());
+            e.printStackTrace();
         } finally {
             try {
                 clientSocket.close();
             } catch (IOException e) {
-                System.out.println("Error al cerrar el socket: " + e.getMessage());
+                e.printStackTrace();
             }
         }
     }
@@ -92,16 +84,16 @@ public class Server implements Runnable{
             case "ATENTION":
                 switch ((String) object.getMessage().getMessage()) {
                     case "Initialize":
-                        sendObject(window.addAtention((Atention) object));
+                        sendObject(window.getAtentionManage().addAtention((Atention) object));
                         break;
                     case "GetTickets":
-                        sendObject(window.getTickets());
+                        sendObject(window.getTicketsManage().getTickets());
                         break;
                     case "ClaimTicket":
-                        sendObject(window.claimTicket((Atention) object, (Ticket) object.getMessage().getObject()));
+                        sendObject(window.getTicketsManage().claimTicket((Atention) object, (Ticket) object.getMessage().getObject()));
                         break;
                     case "Close":
-                        sendMessage(Integer.toString(window.removeAtention((Atention) object)));
+                        sendObject(Integer.toString(window.getAtentionManage().removeAtention((Atention) object)));
                         break;
                 
                     default:
@@ -111,14 +103,16 @@ public class Server implements Runnable{
             case "MANAGE":
                 switch ((String) object.getMessage().getMessage()) {
                     case "Initialize":
-                        sendObject(window.addManage((Manage) object));
+                        sendObject(window.getManageManage().addManage((Manage) object));
                         break;
-                    case "GetQueue":
-                        //resObject = window.getAtentions();
-                        //sendObject(resObject);
+                    case "GetAtentions":
+                        sendObject(window.getAtentionManage().getAtentionConnects());
+                        break;
+                    case "GetTickets":
+                        sendObject(window.getTicketsManage().getAllTickets());
                         break;
                     case "Close":
-                        sendMessage(Integer.toString(window.removeManage((Manage) object)));
+                        sendObject(Integer.toString(window.getManageManage().removeManage((Manage) object)));
                         break;
                     default:
                         break;
@@ -127,13 +121,13 @@ public class Server implements Runnable{
             case "TICKETS":
                 switch ((String) object.getMessage().getMessage()) {
                     case "Initialize":
-                        sendObject(window.addTicket((Tickets) object));
+                        sendObject(window.getTicketManage().addTicket((Tickets) object));
                         break;
                     case "GetDNI":
-                        sendObject(window.createTicket((int) object.getMessage().getObject(), (Tickets) object));
+                        sendObject(window.getTicketsManage().createTicket((int) object.getMessage().getObject(), (Tickets) object, window.getQueueMax()));
                         break;
                     case "Close":
-                        sendObject(window.removeTicket((Tickets) object));
+                        sendObject(window.getTicketManage().removeTicket((Tickets) object));
                         break;
                     default:
                         break;

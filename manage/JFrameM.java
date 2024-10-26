@@ -3,8 +3,9 @@ package manage;
 import javax.swing.*;
 
 import models.Message;
-import types.AtentionAvaliable;
+import types.Atention;
 import types.Manage;
+import types.Ticket;
 import utils.ConfigLoader;
 
 import java.awt.*;
@@ -23,27 +24,99 @@ public class JFrameM extends JFrame {
     private ObjectInputStream input;
 
     private JLabel labelMessage;
+    private JButton buttonMessage;
+    private static JPanel panel = new JPanel(new GridBagLayout());
+    private static GridBagConstraints gbc = new GridBagConstraints();
 
     private Manage client;
+    private ArrayList<Ticket> tickets = new ArrayList<Ticket>();
+    private ArrayList<Atention> atentions = new ArrayList<Atention>();
 
-    @SuppressWarnings("unchecked")
-    public ArrayList<AtentionAvaliable> getData(){
+    public ArrayList<Ticket> getTickets() {
         try {
-            sendMessage("GetQueue", null);
-            ObjectInputStream objectInput= new ObjectInputStream(socket.getInputStream());
-            ArrayList<AtentionAvaliable> atentions = (ArrayList<AtentionAvaliable>) objectInput.readObject();
+            sendMessage("GetTickets", null);
+            Object readObject = input.readObject();
 
-            //if(atentions.size() < 1){
-            //    ArrayList<AtentionAvaliable> atention = new ArrayList<AtentionAvaliable>();
-            //    atention.add(new AtentionAvaliable(new Atention("NO EXISTE", "NO EXISTE", "NO EXISTE"), null));
-            //    return atention;
-            //}
-            return atentions;
-        } catch (Exception e) {
-            ArrayList<AtentionAvaliable> atention = new ArrayList<AtentionAvaliable>();
-            //atention.add(new AtentionAvaliable(new Atention("ERROR", "ERROR", "ERROR"), null));
-            return atention;
+            if (readObject instanceof ArrayList<?>) {
+                ArrayList<?> rawList = (ArrayList<?>) readObject;
+                ArrayList<Ticket> safeTickets = new ArrayList<Ticket>();
+                for (Object item : rawList) if (item instanceof Ticket) safeTickets.add((Ticket) item);
+                tickets = safeTickets;
+            }
+            return tickets;
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+        return tickets;
+    }
+
+    public ArrayList<Atention> getAtentions() {
+        try {
+            sendMessage("GetAtentions", null);
+            Object readObject = input.readObject();
+
+            if (readObject instanceof ArrayList<?>) {
+                ArrayList<?> rawList = (ArrayList<?>) readObject;
+                ArrayList<Atention> safeAtentions = new ArrayList<Atention>();
+                for (Object item : rawList) if (item instanceof Atention) safeAtentions.add((Atention) item);
+                atentions = safeAtentions;
+            }
+            return atentions;
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return atentions;
+    }
+
+    private void updateData() {
+        panel.removeAll();
+        getTickets();
+        getAtentions();
+        int index = 0;
+        for (Atention atention : atentions) {
+            labelMessage = new JLabel(atention.getName());
+            gbc.gridx = 0;
+            gbc.gridy = index;
+            panel.add(labelMessage, gbc);
+            labelMessage = new JLabel(getAtention(atention));
+            gbc.gridx = 1;
+            panel.add(labelMessage, gbc);
+            index++;
+        }
+        gbc.gridx = 0;
+        gbc.gridy = index;
+        gbc.anchor = GridBagConstraints.LINE_START;
+        buttonMessage = new JButton("Actualizar");
+        buttonMessage.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                updateData();
+            } 
+        });
+        panel.add(buttonMessage, gbc);
+        add(panel);
+        revalidate();
+        repaint();
+    }
+
+    private void listener() throws InterruptedException {
+        while (true) {
+            updateData();
+            Thread.sleep(1000);
+        }
+    }
+
+    private String getAtention(Atention atention) {
+        for (Ticket tkt : tickets) {
+            if(tkt.getAtention() != null) {
+                if(tkt.getAtention().getName().equals(atention.getName())) return tkt.getName();
+            }
+        }
+        return "Disponible";
     }
 
     public void initialize() {
@@ -56,8 +129,6 @@ public class JFrameM extends JFrame {
             if(res == 0) return;
 
          /* PANEL */
-            JPanel panel = new JPanel(new GridBagLayout());
-            GridBagConstraints gbc = new GridBagConstraints();
             gbc.insets = new Insets(10, 10, 10, 10);
 
          /* LABELS AND FIELDS */
@@ -67,18 +138,7 @@ public class JFrameM extends JFrame {
          /* ACTIONS */
 
          /* ADDS */
-            ArrayList<AtentionAvaliable> queue = getData();
-            int index = 0;
-            for (AtentionAvaliable string : queue) {
-                labelMessage = new JLabel(string.getAtention().getName() + ":" + string.getTicket());
-                gbc.gridx = 0;
-                gbc.gridy = index;
-                gbc.gridwidth = 2;
-                gbc.anchor = GridBagConstraints.CENTER;
-                panel.add(labelMessage, gbc);
-                index++;
-            }
-            add(panel);
+            updateData();
 
          /* CONFIGS */
             setTitle("MANAGE " + config.getProperty("manage.name"));
@@ -102,6 +162,7 @@ public class JFrameM extends JFrame {
                 }
             });
             setVisible(true);
+            listener();
         } catch (Exception e) {
             e.printStackTrace();
         }
