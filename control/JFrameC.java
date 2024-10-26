@@ -96,7 +96,7 @@ public class JFrameC extends JFrame {
         setJMenuBar(menuBar);
     }
 
-    private void updateData() {
+    public void updateData() {
         serverData.getLabelIP().setText(ip);
         serverData.getLabelPort().setText(Integer.toString(port));
         serverData.getLabelQueueSizeMax().setText(Integer.toString(queueMax));
@@ -226,8 +226,8 @@ public class JFrameC extends JFrame {
 
             /* CONFIGS */
             setTitle("Control");
-            setSize(400, 800);
-            setMaximumSize(new Dimension(400, 800));
+            setSize(550, 880);
+            setMaximumSize(new Dimension(400, 850));
             setMinimumSize(new Dimension(400, 800));
             setLocationRelativeTo(null);
             setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);

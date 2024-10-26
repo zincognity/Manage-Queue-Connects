@@ -3,6 +3,15 @@ package control.views;
 import javax.swing.JMenuBar;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
+import javax.swing.BoxLayout;
+
+import java.awt.Font;
+import java.awt.Color;
+import java.awt.Dimension;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.UIManager;
 
 public class MenuBar extends JMenuBar {
     private JMenu serverBar;
@@ -32,34 +41,62 @@ public class MenuBar extends JMenuBar {
     }
 
     public MenuBar() {
+        try {
+            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
+        setBorder(BorderFactory.createEmptyBorder());
+        setOpaque(false);
+
+        add(Box.createHorizontalGlue());
+
+        Font menuFont = new Font("Arial Semibold", Font.PLAIN, 16);
+        Color textColor = Color.decode("#454545");
+
         serverBar = new JMenu("Servidor");
-        serverBar.setMnemonic('S');
+        serverBar.setFont(menuFont);
+        serverBar.setForeground(textColor);
+        serverBar.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        serverBar.setOpaque(true);
 
         startServer = new JMenuItem("Iniciar Servidor");
-        startServer.setMnemonic('G');
+        startServer.setFont(menuFont);
         serverBar.add(startServer);
 
         restartServer = new JMenuItem("Reiniciar Servidor");
-        restartServer.setMnemonic('R');
+        restartServer.setFont(menuFont);
         serverBar.add(restartServer);
 
         stopServer = new JMenuItem("Detener Servidor");
-        stopServer.setMnemonic('Z');
-
+        stopServer.setFont(menuFont);
         serverBar.add(stopServer);
+
         add(serverBar);
+        add(Box.createRigidArea(new Dimension(20, 0)));
 
         configBar = new JMenu("Configuración");
-        configBar.setMnemonic('M');
+        configBar.setFont(menuFont);
+        configBar.setForeground(textColor);
+        configBar.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        configBar.setOpaque(true);
 
         configMenu = new JMenuItem("Cambiar Puerto");
-        configMenu.setMnemonic('C');
+        configMenu.setFont(menuFont);
         configBar.add(configMenu);
 
         add(configBar);
+        add(Box.createRigidArea(new Dimension(20, 0)));
 
         helpBar = new JMenu("Ayuda");
-        helpBar.setMnemonic('H');
+        helpBar.setFont(menuFont);
+        helpBar.setForeground(textColor);
+        helpBar.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        helpBar.setOpaque(true);
         add(helpBar);
+
+        add(Box.createHorizontalGlue());
     }
 }

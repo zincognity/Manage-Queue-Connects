@@ -15,14 +15,14 @@ import types.Manage;
 import types.Ticket;
 import types.Tickets;
 
-public class Server implements Runnable{
+public class Server implements Runnable {
 
     private Socket socket;
     private JFrameC window;
     private ObjectOutputStream output;
     private ObjectInputStream input;
     private static Map<String, List<ClientBase>> clients = new HashMap<String, List<ClientBase>>();
-    
+
     public Server(Socket socket, JFrameC window) {
         this.socket = socket;
         this.window = window;
@@ -52,20 +52,25 @@ public class Server implements Runnable{
         }
     }
 
-    private void handleClient(Socket clientSocket) throws ClassNotFoundException, IOException{
+    private void handleClient(Socket clientSocket) throws ClassNotFoundException, IOException {
         ClientBase newClient = null;
+        window.updateData();
         try {
             newClient = (ClientBase) input.readObject();
             System.out.println(newClient.getType() + newClient.getIP() + newClient.getMessage());
             handleMessage(newClient);
 
             synchronized (clients) {
-                clients.putIfAbsent(newClient.getType() + "/" + newClient.getIP() + "/" + newClient.getName(), new ArrayList<>());
-                if(clients.get(newClient.getType() + "/" + newClient.getIP() + "/" + newClient.getName()).size() < 1){
-                    clients.get(newClient.getType() + "/" + newClient.getIP() + "/" + newClient.getName()).add(newClient);
+                clients.putIfAbsent(newClient.getType() + "/" + newClient.getIP() + "/" + newClient.getName(),
+                        new ArrayList<>());
+                if (clients.get(newClient.getType() + "/" + newClient.getIP() + "/" + newClient.getName()).size() < 1) {
+                    clients.get(newClient.getType() + "/" + newClient.getIP() + "/" + newClient.getName())
+                            .add(newClient);
                 }
-                
-                System.out.println("Cliente de tipo '" + newClient.getType() + "/" + newClient.getIP() + "/" + newClient.getName() + "' conectado. Total en este tipo: " + clients.get(newClient.getType() + "/" + newClient.getIP() + "/" + newClient.getName()).size());
+
+                System.out.println("Cliente de tipo '" + newClient.getType() + "/" + newClient.getIP() + "/"
+                        + newClient.getName() + "' conectado. Total en este tipo: " + clients
+                                .get(newClient.getType() + "/" + newClient.getIP() + "/" + newClient.getName()).size());
                 printClientCounts();
             }
         } catch (IOException | ClassNotFoundException e) {
@@ -90,12 +95,13 @@ public class Server implements Runnable{
                         sendObject(window.getTicketsManage().getTickets());
                         break;
                     case "ClaimTicket":
-                        sendObject(window.getTicketsManage().claimTicket((Atention) object, (Ticket) object.getMessage().getObject()));
+                        sendObject(window.getTicketsManage().claimTicket((Atention) object,
+                                (Ticket) object.getMessage().getObject()));
                         break;
                     case "Close":
                         sendObject(Integer.toString(window.getAtentionManage().removeAtention((Atention) object)));
                         break;
-                
+
                     default:
                         break;
                 }
@@ -124,7 +130,8 @@ public class Server implements Runnable{
                         sendObject(window.getTicketManage().addTicket((Tickets) object));
                         break;
                     case "GetDNI":
-                        sendObject(window.getTicketsManage().createTicket((int) object.getMessage().getObject(), (Tickets) object, window.getQueueMax()));
+                        sendObject(window.getTicketsManage().createTicket((int) object.getMessage().getObject(),
+                                (Tickets) object, window.getQueueMax()));
                         break;
                     case "Close":
                         sendObject(window.getTicketManage().removeTicket((Tickets) object));
