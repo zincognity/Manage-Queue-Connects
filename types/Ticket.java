@@ -8,6 +8,10 @@ public class Ticket implements Serializable {
     protected Atention atention;
     protected Client client;
     protected String name;
+    protected String reason;
+    protected String response;
+    protected boolean solved;
+    protected LocalDateTime solvedAt;
     protected LocalDateTime createAt;
 
     public Ticket(Tickets ticket, Atention atention, Client client, String name) {
@@ -15,6 +19,10 @@ public class Ticket implements Serializable {
         this.atention = atention;
         this.client = client;
         this.name = name;
+        this.reason = null;
+        this.response = null;
+        this.solved = false;
+        this.solvedAt = null;
         this.createAt = LocalDateTime.now();
     }
 
@@ -46,7 +54,30 @@ public class Ticket implements Serializable {
         this.name = name;
     }
 
+    public String getReason() {
+        return this.reason;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
+    }
+
+    public String getResponse() {
+        return this.response;
+    }
+
+    public void setResponse(String response) {
+        this.response = response;
+    }
+
     public LocalDateTime getCreateAt() {
         return this.createAt;
+    }
+
+    public void resolvedTicket(String reason, String response) {
+        this.solved = true;
+        this.reason = reason;
+        this.response = response;
+        this.solvedAt = LocalDateTime.now();
     }
 }

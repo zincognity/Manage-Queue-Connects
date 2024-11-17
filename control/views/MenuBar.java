@@ -23,6 +23,7 @@ public class MenuBar extends JMenuBar {
     private JMenuItem configMenu;
 
     private JMenu helpBar;
+    private JMenuItem help;
 
     public JMenuItem getConfigMenu() {
         return this.configMenu;
@@ -38,6 +39,10 @@ public class MenuBar extends JMenuBar {
 
     public JMenuItem getStopServer() {
         return this.stopServer;
+    }
+
+    public JMenuItem getHelp() {
+        return this.help;
     }
 
     public MenuBar() {
@@ -95,6 +100,10 @@ public class MenuBar extends JMenuBar {
         helpBar.setForeground(textColor);
         helpBar.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
         helpBar.setOpaque(true);
+
+        help = new JMenuItem("Obtener ayuda");
+        help.setFont(menuFont);
+        helpBar.add(help);
         add(helpBar);
 
         add(Box.createHorizontalGlue());

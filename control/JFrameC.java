@@ -93,6 +93,12 @@ public class JFrameC extends JFrame {
                 stopServer();
             }
         });
+
+        menuBar.getHelp().addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                showHelp();
+            }
+        });
         setJMenuBar(menuBar);
     }
 
@@ -164,18 +170,17 @@ public class JFrameC extends JFrame {
     }
 
     private void stopServer() {
-        isRunning = false;
         if (server != null && !server.isClosed()) {
             try {
                 server.close();
                 menuBar.getStartServer().setEnabled(true);
                 menuBar.getRestartServer().setEnabled(false);
                 menuBar.getStopServer().setEnabled(false);
-                printMessage("El servidor se ha detenido");
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+        isRunning = false;
     }
 
     private void printMessage(String message) {
@@ -199,6 +204,20 @@ public class JFrameC extends JFrame {
         add(panel);
         revalidate();
         repaint();
+    }
+
+    public void showHelp() {
+        JFrame help = new JFrame();
+        help.add(panel);
+
+        help.setTitle("Ayuda");
+        help.setSize(550, 880);
+        help.setMaximumSize(new Dimension(400, 850));
+        help.setMinimumSize(new Dimension(400, 800));
+        help.setLocationRelativeTo(null);
+        help.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        setVisible(true);
+        help.setVisible(true);
     }
 
     public void initialize() {

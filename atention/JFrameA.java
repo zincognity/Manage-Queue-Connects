@@ -2,6 +2,7 @@ package atention;
 
 import javax.swing.*;
 
+import atention.views.Attending;
 import models.Message;
 import utils.ConfigLoader;
 import types.Atention;
@@ -22,10 +23,13 @@ public class JFrameA extends JFrame {
     private ObjectInputStream input;
 
     private static JPanel panel = new JPanel(new GridBagLayout());
-    private static GridBagConstraints gbc = new GridBagConstraints();
+    private GridBagConstraints gbc = new GridBagConstraints();
 
+    private Attending attending;
     private static Atention client;
     private ArrayList<Ticket> tickets = new ArrayList<Ticket>();
+
+    private boolean isAttending;
 
     public ArrayList<Ticket> getTickets() {
         try {
@@ -63,7 +67,7 @@ public class JFrameA extends JFrame {
             buttonMessage.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    onSubmit(ticket);
+                    onAttend(ticket);
                 }
             });
             panel.add(labelMessage, gbc);
@@ -87,8 +91,42 @@ public class JFrameA extends JFrame {
         repaint();
     }
 
-    public void onSubmit(Ticket ticket) {
+    public void onAttend(Ticket ticket) {
+        this.isAttending = true;
+        remove(panel);
+        attending = new Attending(gbc);
+        attending.getLabelTicketName().setText(ticket.getName());
+        attending.getClientName().setText(ticket.getClient().getName() + " " + ticket.getClient().getLastName());
+        attending.getSubmit().addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                if (!attending.getReason().getText().isEmpty() && !attending.getResponse().getText().isEmpty()) {
+                    ticket.setReason(attending.getReason().getText());
+                    ticket.setResponse(attending.getResponse().getText());
+
+                    System.out
+                            .println("TICKET ATENDIDO: " + ticket.getName() + "\nRAZÓN: " + ticket.getReason()
+                                    + "\nRESPUESTA: " + ticket.getResponse());
+                    sendMessage("ATTENDED", ticket);
+                    Attended();
+                }
+            }
+        });
+
+        add(attending);
+        revalidate();
+        repaint();
         sendMessage("ClaimTicket", ticket);
+        setSize(800, 400);
+        setMinimumSize(new Dimension(300, 200));
+    }
+
+    public void Attended() {
+        this.isAttending = false;
+        listener();
+        remove(attending);
+        add(panel);
+        revalidate();
+        repaint();
     }
 
     // public void formAtended() {
@@ -115,6 +153,7 @@ public class JFrameA extends JFrame {
             /* BUTTONS */
 
             /* ACTIONS */
+            this.isAttending = false;
 
             /* ADDS */
             updateTickets();
@@ -150,11 +189,13 @@ public class JFrameA extends JFrame {
     private void listener() {
         new Thread(() -> {
             while (true) {
-                updateTickets();
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                if (!isAttending) {
+                    updateTickets();
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }).start();

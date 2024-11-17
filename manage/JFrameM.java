@@ -18,7 +18,7 @@ import java.net.InetAddress;
 
 public class JFrameM extends JFrame {
     private static ConfigLoader config = new ConfigLoader("manage/config/config.properties");
-    
+
     private Socket socket;
     private ObjectOutputStream output;
     private ObjectInputStream input;
@@ -40,7 +40,9 @@ public class JFrameM extends JFrame {
             if (readObject instanceof ArrayList<?>) {
                 ArrayList<?> rawList = (ArrayList<?>) readObject;
                 ArrayList<Ticket> safeTickets = new ArrayList<Ticket>();
-                for (Object item : rawList) if (item instanceof Ticket) safeTickets.add((Ticket) item);
+                for (Object item : rawList)
+                    if (item instanceof Ticket)
+                        safeTickets.add((Ticket) item);
                 tickets = safeTickets;
             }
             return tickets;
@@ -60,7 +62,9 @@ public class JFrameM extends JFrame {
             if (readObject instanceof ArrayList<?>) {
                 ArrayList<?> rawList = (ArrayList<?>) readObject;
                 ArrayList<Atention> safeAtentions = new ArrayList<Atention>();
-                for (Object item : rawList) if (item instanceof Atention) safeAtentions.add((Atention) item);
+                for (Object item : rawList)
+                    if (item instanceof Atention)
+                        safeAtentions.add((Atention) item);
                 atentions = safeAtentions;
             }
             return atentions;
@@ -95,7 +99,7 @@ public class JFrameM extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 updateData();
-            } 
+            }
         });
         panel.add(buttonMessage, gbc);
         add(panel);
@@ -104,16 +108,24 @@ public class JFrameM extends JFrame {
     }
 
     private void listener() throws InterruptedException {
-        while (true) {
-            updateData();
-            Thread.sleep(1000);
+        try {
+            Object response = null;
+            while ((response = input.readObject()) != null) {
+                if (response.equals("res"))
+                    updateData();
+            }
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
     private String getAtention(Atention atention) {
         for (Ticket tkt : tickets) {
-            if(tkt.getAtention() != null) {
-                if(tkt.getAtention().getName().equals(atention.getName())) return tkt.getName();
+            if (tkt.getAtention() != null) {
+                if (tkt.getAtention().getName().equals(atention.getName()))
+                    return tkt.getName();
             }
         }
         return "Disponible";
@@ -126,21 +138,22 @@ public class JFrameM extends JFrame {
             sendMessage("Initialize", null);
 
             int res = (int) input.readObject();
-            if(res == 0) return;
+            if (res == 0)
+                return;
 
-         /* PANEL */
+            /* PANEL */
             gbc.insets = new Insets(10, 10, 10, 10);
 
-         /* LABELS AND FIELDS */
+            /* LABELS AND FIELDS */
 
-         /* BUTTONS */
+            /* BUTTONS */
 
-         /* ACTIONS */
+            /* ACTIONS */
 
-         /* ADDS */
+            /* ADDS */
             updateData();
 
-         /* CONFIGS */
+            /* CONFIGS */
             setTitle("MANAGE " + config.getProperty("manage.name"));
             setSize(400, 200);
             setMinimumSize(new Dimension(300, 200));
@@ -149,20 +162,21 @@ public class JFrameM extends JFrame {
             addWindowListener(new WindowAdapter() {
                 @Override
                 public void windowClosing(WindowEvent e) {
-                        try {
-                            sendMessage("Close", null);
-                        } catch (Exception e1) {
-                            System.err.println("Error al enviar el mensaje: " + e1.getMessage());
-                            e1.printStackTrace();
-                        } finally {
-                            closeResources();
-                            dispose();
-                        }
+                    try {
+                        sendMessage("Close", null);
+                    } catch (Exception e1) {
+                        System.err.println("Error al enviar el mensaje: " + e1.getMessage());
+                        e1.printStackTrace();
+                    } finally {
+                        closeResources();
                         dispose();
+                    }
+                    dispose();
                 }
             });
             setVisible(true);
             listener();
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -170,7 +184,8 @@ public class JFrameM extends JFrame {
 
     private void sendMessage(String message, Object object) {
         try {
-            socket = new Socket(config.getProperty("control.server"),Integer.parseInt(config.getProperty("control.port")));
+            socket = new Socket(config.getProperty("control.server"),
+                    Integer.parseInt(config.getProperty("control.port")));
             output = new ObjectOutputStream(socket.getOutputStream());
             input = new ObjectInputStream(socket.getInputStream());
 
@@ -185,9 +200,12 @@ public class JFrameM extends JFrame {
 
     private void closeResources() {
         try {
-            if (output != null) output.close();
-            if (input != null) input.close();
-            if (socket != null) socket.close();
+            if (output != null)
+                output.close();
+            if (input != null)
+                input.close();
+            if (socket != null)
+                socket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }

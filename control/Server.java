@@ -22,6 +22,7 @@ public class Server implements Runnable {
     private ObjectOutputStream output;
     private ObjectInputStream input;
     private static Map<String, List<ClientBase>> clients = new HashMap<String, List<ClientBase>>();
+    private ArrayList<ObjectOutput> outputs = new ArrayList<ObjectOutput>();
 
     public Server(Socket socket, JFrameC window) {
         this.socket = socket;
@@ -36,6 +37,7 @@ public class Server implements Runnable {
     public void run() {
         try {
             output = new ObjectOutputStream(socket.getOutputStream());
+            outputs.add(output);
             input = new ObjectInputStream(socket.getInputStream());
             handleClient(socket);
         } catch (Exception e) {
@@ -84,11 +86,27 @@ public class Server implements Runnable {
         }
     }
 
+    private void asd() {
+        if (outputs instanceof ArrayList<?>) {
+            ArrayList<?> rawList = (ArrayList<?>) outputs;
+            for (int i = 0; i < rawList.size(); i++) {
+                if (rawList.get(i) instanceof Manage) {
+                    try {
+                        outputs.get(i).writeObject("res");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+    }
+
     private void handleMessage(ClientBase object) {
         switch ((String) object.getType()) {
             case "ATENTION":
                 switch ((String) object.getMessage().getMessage()) {
                     case "Initialize":
+                        asd();
                         sendObject(window.getAtentionManage().addAtention((Atention) object));
                         break;
                     case "GetTickets":
