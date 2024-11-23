@@ -15,12 +15,16 @@ public class TicketManage {
     }
 
     public ArrayList<Tickets> getTicketConnects() {
-        return this.ticket_connects;
+        ArrayList<Tickets> serializableTickets = ticket_connects;
+        serializableTickets.forEach(ticket -> {
+            ticket.setOutput(null);
+        });
+        return serializableTickets;
     }
 
     public int addTicket(Tickets ticket) {
         for (Tickets tkt : ticket_connects) {
-            if(tkt.getIP().equals(ticket.getIP()) && tkt.getName().equals(ticket.getName())) {
+            if (tkt.getIP().equals(ticket.getIP()) && tkt.getName().equals(ticket.getName())) {
                 return 0;
             }
         }
@@ -31,7 +35,7 @@ public class TicketManage {
 
     public int removeTicket(Tickets ticket) {
         for (Tickets tkt : ticket_connects) {
-            if(tkt.getIP().equals(ticket.getIP()) && tkt.getName().equals(ticket.getName())) {
+            if (tkt.getIP().equals(ticket.getIP()) && tkt.getName().equals(ticket.getName())) {
                 ticket_connects.remove(tkt);
                 update.getLabelTickets().setText(Integer.toString(ticket_connects.size()));
             }

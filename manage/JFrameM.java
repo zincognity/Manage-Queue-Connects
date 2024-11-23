@@ -19,9 +19,9 @@ import java.net.InetAddress;
 public class JFrameM extends JFrame {
     private static ConfigLoader config = new ConfigLoader("manage/config/config.properties");
 
-    private Socket socket;
-    private ObjectOutputStream output;
-    private ObjectInputStream input;
+    private static Socket socket;
+    private static ObjectOutputStream output;
+    private static ObjectInputStream input;
 
     private JLabel labelMessage;
     private JButton buttonMessage;
@@ -107,18 +107,24 @@ public class JFrameM extends JFrame {
         repaint();
     }
 
-    private void listener() throws InterruptedException {
-        try {
-            Object response = null;
-            while ((response = input.readObject()) != null) {
-                if (response.equals("res"))
-                    updateData();
+    private void listener() {
+        new Thread(() -> {
+            while (true) {
+                try {
+                    Object response = input.readObject();
+                    if (response != null) {
+                        if (response.equals("UPDATE"))
+                            updateData();
+                    } else {
+                        System.out.println("El servidor envió un objeto nulo.");
+                    }
+                } catch (EOFException e) {
+                    System.out.println("El servidor cerró la conexión antes de enviar datos.");
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
             }
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        }).start();
     }
 
     private String getAtention(Atention atention) {
@@ -176,13 +182,12 @@ public class JFrameM extends JFrame {
             });
             setVisible(true);
             listener();
-
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void sendMessage(String message, Object object) {
+    public void sendMessage(String message, Object object) {
         try {
             socket = new Socket(config.getProperty("control.server"),
                     Integer.parseInt(config.getProperty("control.port")));
@@ -204,7 +209,7 @@ public class JFrameM extends JFrame {
                 output.close();
             if (input != null)
                 input.close();
-            if (socket != null)
+            if (socket != null && !socket.isClosed())
                 socket.close();
         } catch (IOException e) {
             e.printStackTrace();

@@ -10,17 +10,21 @@ public class AtentionManage {
     private ServerData update;
 
     public AtentionManage(ServerData update) {
-        atention_connects = new ArrayList<Atention>();
+        this.atention_connects = new ArrayList<Atention>();
         this.update = update;
     }
 
     public ArrayList<Atention> getAtentionConnects() {
-        return this.atention_connects;
+        ArrayList<Atention> serializableAtentions = atention_connects;
+        serializableAtentions.forEach(atention -> {
+            atention.setOutput(null);
+        });
+        return serializableAtentions;
     }
 
-    public int addAtention(Atention atention){
+    public int addAtention(Atention atention) {
         for (Atention atn : atention_connects) {
-            if(atn.getIP().equals(atention.getIP()) && atn.getName().equals(atention.getName())) {
+            if (atn.getIP().equals(atention.getIP()) && atn.getName().equals(atention.getName())) {
                 return 0;
             }
         }
@@ -29,9 +33,9 @@ public class AtentionManage {
         return 1;
     }
 
-    public int removeAtention(Atention atention){
+    public int removeAtention(Atention atention) {
         for (Atention atn : atention_connects) {
-            if(atn.getIP().equals(atention.getIP()) && atn.getName().equals(atention.getName())) {
+            if (atn.getIP().equals(atention.getIP()) && atn.getName().equals(atention.getName())) {
                 atention_connects.remove(atn);
                 update.getLabelAtentions().setText(Integer.toString(atention_connects.size()));
             }

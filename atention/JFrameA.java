@@ -189,13 +189,21 @@ public class JFrameA extends JFrame {
     private void listener() {
         new Thread(() -> {
             while (true) {
-                if (!isAttending) {
-                    updateTickets();
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                try {
+                    Object response = input.readObject();
+                    if (response != null) {
+                        if (response.equals("UPDATE"))
+                            if (!isAttending) {
+                                System.out.println("SI");
+                                updateTickets();
+                            }
+                    } else {
+                        System.out.println("El servidor envió un objeto nulo.");
                     }
+                } catch (EOFException e) {
+                    System.out.println("El servidor cerró la conexión antes de enviar datos.");
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
                 }
             }
         }).start();

@@ -1,14 +1,16 @@
 package models;
 
+import java.io.ObjectOutput;
 import java.io.Serializable;
 
-public class ClientBase implements Serializable{
+public class ClientBase implements Serializable {
     protected String type;
     protected String ip;
     protected String name;
     protected Message message;
+    protected ObjectOutput output;
 
-    public ClientBase(String type, String ip, String name, Message message){
+    public ClientBase(String type, String ip, String name, Message message) {
         this.type = type;
         this.ip = ip;
         this.name = name;
@@ -37,5 +39,13 @@ public class ClientBase implements Serializable{
 
     public void setMessage(Message message) {
         this.message = message;
+    }
+
+    public ObjectOutput getOutput() {
+        return this.output;
+    }
+
+    public void setOutput(ObjectOutput output) {
+        this.output = output;
     }
 }
