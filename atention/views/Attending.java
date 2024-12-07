@@ -5,24 +5,39 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.util.ArrayList;
 import javax.swing.*;
+
+import atention.utils.ButtonCustom;
+import atention.utils.Countup;
+
 import java.awt.Font;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 
 public class Attending extends JPanel {
     private JLabel labelTicketName;
-    private JLabel labelClientName;
+    private JLabel labelClientDNI;
+    private JLabel labelClientNames;
+    private JLabel labelTimeDetail;
+    private Countup countup;
     private JTextArea reason;
     private JTextArea response;
-    private JCheckBox solved;
     private JButton submit;
 
     public JLabel getLabelTicketName() {
         return this.labelTicketName;
     }
 
-    public JLabel getClientName() {
-        return this.labelClientName;
+    public JLabel getLabelClientDNI() {
+        return this.labelClientDNI;
+    }
+
+    public JLabel getLabelClientNames() {
+        return this.labelClientNames;
+    }
+
+    public Countup getCountup() {
+        return this.countup;
     }
 
     public JTextArea getReason() {
@@ -33,83 +48,71 @@ public class Attending extends JPanel {
         return this.response;
     }
 
-    public JCheckBox getSolved() {
-        return this.solved;
-    }
-
     public JButton getSubmit() {
         return this.submit;
     }
 
     public Attending(GridBagConstraints gbc) {
-        ArrayList<JLabel> labelsStatic = new ArrayList<>();
-        ArrayList<JLabel> labelsResponse = new ArrayList<>();
+        ArrayList<Component> components = new ArrayList<Component>();
 
-        /* CONFIG */
         setLayout(new GridBagLayout());
         gbc.insets = new Insets(15, 10, 15, 10);
 
-        /* LABELS AND FIELDS */
-        labelsStatic.add(new JLabel("TICKET:"));
-        labelsResponse.add((labelTicketName = new JLabel("Desconocido")));
-        labelsStatic.add(new JLabel("CLIENTE"));
-        labelsResponse.add((labelClientName = new JLabel("Desconocido")));
-        /* ADDS */
-        int index = 1;
+        components.add(new JLabel("TICKET:"));
+        components.add((this.labelTicketName) = new JLabel("Desconocido"));
+        components.add(new JLabel("DNI:"));
+        components.add((this.labelClientDNI) = new JLabel("Desconocido"));
+        components.add(new JLabel("NOMBRES:"));
+        components.add((this.labelClientNames) = new JLabel("Desconocido"));
+        components.add(new JLabel("TIEMPO TRANSCURRIDO:"));
+        components.add((this.labelTimeDetail) = new JLabel("00:00:00"));
+        countup = new Countup(labelTimeDetail);
+        components.add(new JLabel("RAZÓN:"));
+        components.add(new JScrollPane((this.reason) = new JTextArea(8, 20)));
+        components.add(new JLabel("RESPUESTA:"));
+        components.add(new JScrollPane((this.response) = new JTextArea(8, 20)));
+        components.add((this.submit) = new ButtonCustom("GUARDAR", new Dimension(150, 40)));
+
+        int index = 0;
         gbc.gridwidth = 1;
 
-        Font menuFont = new Font("Arial Semibold", Font.PLAIN, 16);
+        Font menuFont = new Font("SansSerif", Font.BOLD, 16);
         Color textColor = Color.decode("#004DFF");
 
-        for (JLabel label : labelsStatic) {
-            label.setFont(menuFont);
-            gbc.gridx = 0;
-            gbc.gridy = index;
-            gbc.anchor = GridBagConstraints.LINE_START;
-
-            add(label, gbc);
-
-            gbc.gridx = 1;
-            gbc.gridy = index;
-            labelsResponse.get(index - 1).setForeground(textColor);
-            labelsResponse.get(index - 1).setFont(menuFont);
-
-            add(labelsResponse.get(index - 1), gbc);
-            index++;
+        for (Component component : components) {
+            if (component instanceof JLabel) {
+                JLabel label = (JLabel) component;
+                label.setFont(menuFont);
+                if (label != labelTicketName && label != labelClientDNI && label != labelClientNames
+                        && label != labelTimeDetail) {
+                    gbc.gridx = 0;
+                    gbc.gridy = index++;
+                    gbc.anchor = GridBagConstraints.LINE_START;
+                    add(label, gbc);
+                } else {
+                    label.setForeground(textColor);
+                    gbc.gridx = 1;
+                    gbc.gridy = index - 1;
+                    gbc.anchor = GridBagConstraints.LINE_START;
+                    add(label, gbc);
+                }
+            } else if (component instanceof JScrollPane) {
+                gbc.gridx = 1;
+                gbc.gridy = index - 1;
+                gbc.gridwidth = 2;
+                gbc.weightx = 1.0;
+                gbc.weighty = 0.5;
+                gbc.fill = GridBagConstraints.BOTH;
+                add(component, gbc);
+            } else if (component instanceof JButton) {
+                component.setFont(menuFont);
+                gbc.gridx = 0;
+                gbc.gridy = index++;
+                gbc.gridwidth = 3;
+                gbc.fill = GridBagConstraints.NONE;
+                gbc.anchor = GridBagConstraints.CENTER;
+                add(component, gbc);
+            }
         }
-
-        reason = new JTextArea(8, 40);
-        reason.setPreferredSize(new Dimension(200, 30));
-        reason.setFont(menuFont);
-        gbc.gridx = 0;
-        gbc.gridy = index;
-        gbc.anchor = GridBagConstraints.LINE_START;
-
-        add(reason, gbc);
-
-        response = new JTextArea(8, 40);
-        response.setPreferredSize(new Dimension(200, 30));
-        response.setFont(menuFont);
-        gbc.gridx = 0;
-        gbc.gridy = index + 1;
-        gbc.anchor = GridBagConstraints.LINE_START;
-
-        add(response, gbc);
-
-        solved = new JCheckBox("RESUELTO");
-        solved.setFont(menuFont);
-        gbc.gridx = 0;
-        gbc.gridy = index + 2;
-        gbc.anchor = GridBagConstraints.LINE_START;
-
-        add(solved, gbc);
-
-        submit = new JButton("GUARDAR");
-        submit.setFont(menuFont);
-        gbc.gridx = 0;
-        gbc.gridy = index + 3;
-        gbc.anchor = GridBagConstraints.LINE_START;
-
-        add(submit, gbc);
     }
 }

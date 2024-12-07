@@ -6,6 +6,9 @@ import java.awt.Insets;
 import java.awt.Image;
 import java.util.ArrayList;
 import javax.swing.*;
+
+import tickets.utils.LabelCustom;
+
 import java.awt.Font;
 import java.awt.Color;
 import java.awt.FontMetrics;
@@ -52,9 +55,8 @@ public class ServerData extends JPanel {
         ArrayList<JLabel> labelsStatic = new ArrayList<>();
         ArrayList<JLabel> labelsResponse = new ArrayList<>();
 
-        /* CONFIG */
         setLayout(new GridBagLayout());
-        gbc.insets = new Insets(15, 10, 15, 10);
+        gbc.insets = new Insets(10, 10, 10, 10);
 
         ImageIcon icon = new ImageIcon("control/images/config.png");
         Image scaledImage = icon.getImage().getScaledInstance(150, 150, Image.SCALE_SMOOTH);
@@ -66,26 +68,24 @@ public class ServerData extends JPanel {
         gbc.gridwidth = 2;
         add(imageLabel, gbc);
 
-        /* LABELS AND FIELDS */
+        Font menuFont = new Font("SansSerif", Font.BOLD, 14);
+
         labelsStatic.add(new JLabel("DIRECCIÓN IP:"));
-        labelsResponse.add((labelIP = new JLabel("Desconocida")));
+        labelsResponse.add((labelIP = new LabelCustom("DESCONOCIDA", menuFont)));
         labelsStatic.add(new JLabel("PUERTO:"));
-        labelsResponse.add((labelPort = new JLabel("Desconocida")));
+        labelsResponse.add((labelPort = new LabelCustom("DESCONOCIDA", menuFont)));
         labelsStatic.add(new JLabel("ATENCIONES TRABAJANDO:"));
-        labelsResponse.add(labelAtentions = new JLabel("0"));
+        labelsResponse.add(labelAtentions = new LabelCustom("0", menuFont));
         labelsStatic.add(new JLabel("PANTALLAS TRABAJANDO:"));
-        labelsResponse.add((labelManages = new JLabel("0")));
+        labelsResponse.add((labelManages = new LabelCustom("0", menuFont)));
         labelsStatic.add(new JLabel("TICKETS TRABAJANDO:"));
-        labelsResponse.add((labelTickets = new JLabel("0")));
+        labelsResponse.add((labelTickets = new LabelCustom("0", menuFont)));
         labelsStatic.add(new JLabel("TAMAÑO MÁXIMO DE LA COLA:"));
-        labelsResponse.add((labelQueueSizeMax = new JLabel("Desconocida")));
+        labelsResponse.add((labelQueueSizeMax = new LabelCustom("DESCONOCIDA", menuFont)));
         labelQueueSize = new JLabel("0");
-        /* ADDS */
+
         int index = 1;
         gbc.gridwidth = 1;
-
-        Font menuFont = new Font("Arial Semibold", Font.PLAIN, 16);
-        Color textColor = Color.decode("#004DFF");
 
         for (JLabel label : labelsStatic) {
             label.setFont(menuFont);
@@ -97,9 +97,7 @@ public class ServerData extends JPanel {
 
             gbc.gridx = 1;
             gbc.gridy = index;
-            labelsResponse.get(index - 1).setForeground(textColor);
-            labelsResponse.get(index - 1).setFont(menuFont);
-
+            gbc.anchor = GridBagConstraints.CENTER;
             add(labelsResponse.get(index - 1), gbc);
             index++;
         }
@@ -107,11 +105,13 @@ public class ServerData extends JPanel {
         JLabel labelQueueSizeStatic = new JLabel("Personas en cola");
         labelQueueSizeStatic.setFont(menuFont);
         labelQueueSizeStatic.setHorizontalAlignment(SwingConstants.CENTER);
-        labelQueueSizeStatic.setBorder(BorderFactory.createEmptyBorder(200, 0, 0, 0));
+        labelQueueSizeStatic.setBorder(BorderFactory.createEmptyBorder(180, 0, 0, 0));
         gbc.gridx = 0;
         gbc.gridy = index;
         gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.CENTER;
+        Color backgroundColor = Color.decode("#F0F0F0");
+        setBackground(backgroundColor);
         add(labelQueueSizeStatic, gbc);
     }
 
@@ -122,7 +122,7 @@ public class ServerData extends JPanel {
 
         int squareSize = 160;
         int x = (getWidth() - squareSize) / 2;
-        int y = getHeight() - squareSize - 80;
+        int y = getHeight() - squareSize - 50;
 
         box.fillRect(x, y, squareSize, squareSize);
 

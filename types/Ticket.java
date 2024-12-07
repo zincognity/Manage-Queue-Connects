@@ -1,6 +1,7 @@
 package types;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class Ticket implements Serializable {
@@ -72,6 +73,22 @@ public class Ticket implements Serializable {
 
     public LocalDateTime getCreateAt() {
         return this.createAt;
+    }
+
+    public void setCreateAt(LocalDateTime createAt) {
+        this.createAt = createAt;
+    }
+
+    public LocalDateTime getSolvedAt() {
+        return this.solvedAt;
+    }
+
+    public LocalDate getCreateAtDate() {
+        return this.createAt.toLocalDate();
+    }
+
+    public boolean isSolved() {
+        return this.solved;
     }
 
     public void resolvedTicket(String reason, String response) {

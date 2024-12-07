@@ -1,6 +1,6 @@
 package models;
 
-import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
 public class ClientBase implements Serializable {
@@ -8,7 +8,7 @@ public class ClientBase implements Serializable {
     protected String ip;
     protected String name;
     protected Message message;
-    protected ObjectOutput output;
+    protected ObjectOutputStream output;
 
     public ClientBase(String type, String ip, String name, Message message) {
         this.type = type;
@@ -41,11 +41,11 @@ public class ClientBase implements Serializable {
         this.message = message;
     }
 
-    public ObjectOutput getOutput() {
+    public ObjectOutputStream getOutput() {
         return this.output;
     }
 
-    public void setOutput(ObjectOutput output) {
+    public void setOutput(ObjectOutputStream output) {
         this.output = output;
     }
 }

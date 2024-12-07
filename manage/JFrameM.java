@@ -2,6 +2,7 @@ package manage;
 
 import javax.swing.*;
 
+import manage.views.AtentionStatus;
 import models.Message;
 import types.Atention;
 import types.Manage;
@@ -23,12 +24,11 @@ public class JFrameM extends JFrame {
     private static ObjectOutputStream output;
     private static ObjectInputStream input;
 
-    private JLabel labelMessage;
-    private JButton buttonMessage;
     private static JPanel panel = new JPanel(new GridBagLayout());
     private static GridBagConstraints gbc = new GridBagConstraints();
 
     private Manage client;
+    private AtentionStatus atentionStatus = new AtentionStatus();
     private ArrayList<Ticket> tickets = new ArrayList<Ticket>();
     private ArrayList<Atention> atentions = new ArrayList<Atention>();
 
@@ -77,31 +77,19 @@ public class JFrameM extends JFrame {
     }
 
     private void updateData() {
-        panel.removeAll();
         getTickets();
         getAtentions();
-        int index = 0;
-        for (Atention atention : atentions) {
-            labelMessage = new JLabel(atention.getName());
+        panel.removeAll();
+        if (atentionStatus != null)
+            atentionStatus.updateData(atentions, tickets);
+        else {
             gbc.gridx = 0;
-            gbc.gridy = index;
-            panel.add(labelMessage, gbc);
-            labelMessage = new JLabel(getAtention(atention));
-            gbc.gridx = 1;
-            panel.add(labelMessage, gbc);
-            index++;
+            gbc.gridy = 3;
+            JLabel labelTicket = new JLabel("NO HAY ATENCIONES DISPONIBLES");
+            panel.add(labelTicket, gbc);
         }
-        gbc.gridx = 0;
-        gbc.gridy = index;
-        gbc.anchor = GridBagConstraints.LINE_START;
-        buttonMessage = new JButton("Actualizar");
-        buttonMessage.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                updateData();
-            }
-        });
-        panel.add(buttonMessage, gbc);
+
+        panel.add(atentionStatus, gbc);
         add(panel);
         revalidate();
         repaint();
@@ -112,12 +100,10 @@ public class JFrameM extends JFrame {
             while (true) {
                 try {
                     Object response = input.readObject();
-                    if (response != null) {
-                        if (response.equals("UPDATE"))
+                    if (response != null)
+                        if (response.equals("UPDATE")) {
                             updateData();
-                    } else {
-                        System.out.println("El servidor envió un objeto nulo.");
-                    }
+                        }
                 } catch (EOFException e) {
                     System.out.println("El servidor cerró la conexión antes de enviar datos.");
                 } catch (IOException | ClassNotFoundException e) {
@@ -125,16 +111,6 @@ public class JFrameM extends JFrame {
                 }
             }
         }).start();
-    }
-
-    private String getAtention(Atention atention) {
-        for (Ticket tkt : tickets) {
-            if (tkt.getAtention() != null) {
-                if (tkt.getAtention().getName().equals(atention.getName()))
-                    return tkt.getName();
-            }
-        }
-        return "Disponible";
     }
 
     public void initialize() {
@@ -147,22 +123,14 @@ public class JFrameM extends JFrame {
             if (res == 0)
                 return;
 
-            /* PANEL */
             gbc.insets = new Insets(10, 10, 10, 10);
 
-            /* LABELS AND FIELDS */
-
-            /* BUTTONS */
-
-            /* ACTIONS */
-
-            /* ADDS */
             updateData();
 
-            /* CONFIGS */
             setTitle("MANAGE " + config.getProperty("manage.name"));
-            setSize(400, 200);
-            setMinimumSize(new Dimension(300, 200));
+            setSize(500, 800);
+            setMinimumSize(new Dimension(500, 800));
+            setMaximumSize(new Dimension(500, 800));
             setLocationRelativeTo(null);
             setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
             addWindowListener(new WindowAdapter() {

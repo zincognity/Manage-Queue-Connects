@@ -15,10 +15,14 @@ public class AtentionManage {
     }
 
     public ArrayList<Atention> getAtentionConnects() {
-        ArrayList<Atention> serializableAtentions = atention_connects;
-        serializableAtentions.forEach(atention -> {
-            atention.setOutput(null);
-        });
+        ArrayList<Atention> serializableAtentions = new ArrayList<Atention>();
+
+        for (Atention atention : atention_connects) {
+            Atention clonedAtention = new Atention(atention);
+            clonedAtention.setOutput(null);
+            serializableAtentions.add(clonedAtention);
+        }
+
         return serializableAtentions;
     }
 
@@ -33,13 +37,11 @@ public class AtentionManage {
         return 1;
     }
 
-    public int removeAtention(Atention atention) {
-        for (Atention atn : atention_connects) {
-            if (atn.getIP().equals(atention.getIP()) && atn.getName().equals(atention.getName())) {
-                atention_connects.remove(atn);
-                update.getLabelAtentions().setText(Integer.toString(atention_connects.size()));
-            }
+    public void removeAtention(Atention atention) {
+        synchronized (atention_connects) {
+            atention_connects.removeIf(currentAtention -> currentAtention.getIP().equals(atention.getIP())
+                    && currentAtention.getName().equals(atention.getName()));
+            update.getLabelAtentions().setText(Integer.toString(atention_connects.size()));
         }
-        return atention_connects.size();
     }
 }

@@ -33,13 +33,11 @@ public class TicketManage {
         return 1;
     }
 
-    public int removeTicket(Tickets ticket) {
-        for (Tickets tkt : ticket_connects) {
-            if (tkt.getIP().equals(ticket.getIP()) && tkt.getName().equals(ticket.getName())) {
-                ticket_connects.remove(tkt);
-                update.getLabelTickets().setText(Integer.toString(ticket_connects.size()));
-            }
+    public void removeTicket(Tickets ticket) {
+        synchronized (ticket_connects) {
+            ticket_connects.removeIf(currentTicket -> currentTicket.getIP().equals(ticket.getIP())
+                    && currentTicket.getName().equals(ticket.getName()));
+            update.getLabelAtentions().setText(Integer.toString(ticket_connects.size()));
         }
-        return ticket_connects.size();
     }
 }

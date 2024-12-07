@@ -14,7 +14,6 @@ import types.Ticket;
 import types.Tickets;
 
 public class Server implements Runnable {
-
     private Socket socket;
     private JFrameC window;
     private ObjectOutputStream output;
@@ -26,16 +25,12 @@ public class Server implements Runnable {
         this.window = window;
     }
 
-    public void serSocket(Socket socket) {
-        this.socket = socket;
-    }
-
     @Override
     public void run() {
         try {
             this.output = new ObjectOutputStream(socket.getOutputStream());
             this.input = new ObjectInputStream(socket.getInputStream());
-            handleClient(socket);
+            handleClient();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -50,43 +45,53 @@ public class Server implements Runnable {
         }
     }
 
-    private void handleClient(Socket clientSocket) throws ClassNotFoundException, IOException {
+    private void handleClient() throws ClassNotFoundException, IOException {
         ClientBase newClient = null;
         this.window.updateData();
 
         try {
             newClient = (ClientBase) input.readObject();
-            System.out.println(newClient.getType() + " " + newClient.getIP() + " " + newClient.getMessage());
+            System.out
+                    .println(newClient.getType() + " " + newClient.getIP() + " " + newClient.getMessage().getMessage());
             handleMessage(newClient);
 
-            synchronized (clients) {
-                clients.putIfAbsent(newClient.getType(), new ArrayList<>());
+            clients.putIfAbsent(newClient.getType(), new ArrayList<ClientBase>());
 
-                if (isUniqueClient(newClient)) {
-                    newClient.setOutput(output);
-                    clients.get(newClient.getType()).add(newClient);
-                } else {
-                    ClientBase tempNewClient = newClient;
-                    clients.get(newClient.getType()).forEach(client -> {
-                        if (client.getType().equals(tempNewClient.getType()) &&
-                                client.getIP().equals(tempNewClient.getIP()) &&
-                                client.getName().equals(tempNewClient.getName())) {
-                            try {
+            if (isUniqueClient(newClient)) {
+                newClient.setOutput(this.output);
+                System.out.println("Se ha establecido el output de " + newClient.getType()
+                        + newClient.getName() + ":" + this.output + "verificando: " + newClient.getOutput());
+                clients.get(newClient.getType()).add(newClient);
+            } else {
+                ClientBase tempNewClient = newClient;
+                clients.get(newClient.getType()).forEach(client -> {
+                    if (client.getType().equals(tempNewClient.getType()) &&
+                            client.getIP().equals(tempNewClient.getIP()) &&
+                            client.getName().equals(tempNewClient.getName())) {
+                        try {
+                            if (client.getOutput() != null) {
                                 client.getOutput().close();
-                                client.setOutput(output);
-                            } catch (IOException e) {
-                                e.printStackTrace();
+                                System.out.println("El output de " + client.getType() + client.getName() + " se cerró: "
+                                        + client.getOutput());
                             }
+                            client.setOutput(this.output);
+                            System.out.println("Se ha establecido el nuevo output de " + client.getType()
+                                    + client.getName() + ":" + output + "verificando: " + client.getOutput());
+                        } catch (IOException e) {
+                            e.printStackTrace();
                         }
-                    });
-                }
-
-                System.out.println("Cliente de tipo '" + newClient.getType() + "/" + newClient.getIP() + "/"
-                        + newClient.getName() + "' conectado. Total en este tipo: "
-                        + clients.get(newClient.getType()).size());
-                printClientCounts();
+                    }
+                });
             }
 
+            for (String a : clients.keySet()) {
+                clients.get(a).forEach(c -> {
+                    System.out.println("VERIFICANDO " + a + c.getOutput());
+
+                });
+            }
+
+            printClientCounts();
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
@@ -99,33 +104,16 @@ public class Server implements Runnable {
                         client.getName().equals(newClient.getName()));
     }
 
-    private void sendUpdateToMonitor() {
-        synchronized (clients) {
-            for (Map.Entry<String, ArrayList<ClientBase>> entry : clients.entrySet()) {
-                if (entry.getKey().equals("MANAGE"))
-                    for (ClientBase client : entry.getValue()) {
-                        try {
-                            client.getOutput().writeObject("UPDATE");
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-            }
-        }
-    }
-
-    private void sendUpdateToAtention() {
-        synchronized (clients) {
-            for (Map.Entry<String, ArrayList<ClientBase>> entry : clients.entrySet()) {
-                if (entry.getKey().equals("ATENTION"))
-                    for (ClientBase client : entry.getValue()) {
-                        try {
-                            client.getOutput().writeObject("UPDATE");
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-            }
+    private void sendMessageToClients(String name, String message) {
+        if (clients.get(name) != null) {
+            clients.get(name).forEach(client -> {
+                System.out.println(client.getType() + client.getName() + client.getOutput());
+                try {
+                    client.getOutput().writeObject(message);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
         }
     }
 
@@ -135,7 +123,7 @@ public class Server implements Runnable {
                 switch ((String) object.getMessage().getMessage()) {
                     case "Initialize":
                         sendObject(window.getAtentionManage().addAtention((Atention) object));
-                        sendUpdateToMonitor();
+                        sendMessageToClients("MANAGE", "UPDATE");
                         break;
                     case "GetTickets":
                         sendObject(window.getTicketsManage().getTickets());
@@ -143,10 +131,21 @@ public class Server implements Runnable {
                     case "ClaimTicket":
                         sendObject(window.getTicketsManage().claimTicket((Atention) object,
                                 (Ticket) object.getMessage().getObject()));
-                        sendUpdateToMonitor();
+                        window.getTicketsManage().getUpdate().getLabelQueueSize()
+                                .setText(Integer.toString(window.getTicketsManage().getTickets().size()));
+                        sendMessageToClients("MANAGE", "UPDATE");
+                        sendMessageToClients("ATENTION", "UPDATE");
+                        break;
+                    case "Attended":
+                        window.getTicketsManage().attendedTicket((Ticket) object.getMessage().getObject());
+                        if (window.getTicketTableViewer() != null)
+                            window.getTicketTableViewer().updateData(null);
+                        sendMessageToClients("MANAGE", "UPDATE");
+                        sendMessageToClients("ATENTION", "UPDATE");
                         break;
                     case "Close":
-                        sendObject(Integer.toString(window.getAtentionManage().removeAtention((Atention) object)));
+                        window.getAtentionManage().removeAtention((Atention) object);
+                        sendMessageToClients("MANAGE", "UPDATE");
                         break;
 
                     default:
@@ -179,10 +178,12 @@ public class Server implements Runnable {
                     case "GetDNI":
                         sendObject(window.getTicketsManage().createTicket((int) object.getMessage().getObject(),
                                 (Tickets) object, window.getQueueMax()));
-                        sendUpdateToAtention();
+                        window.getTicketsManage().getUpdate().getLabelQueueSize()
+                                .setText(Integer.toString(window.getTicketsManage().getTickets().size()));
+                        sendMessageToClients("ATENTION", "UPDATE");
                         break;
                     case "Close":
-                        sendObject(window.getTicketManage().removeTicket((Tickets) object));
+                        window.getTicketManage().removeTicket((Tickets) object);
                         break;
                     default:
                         break;

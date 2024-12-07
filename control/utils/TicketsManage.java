@@ -18,6 +18,10 @@ public class TicketsManage {
     private ServerData update;
     private List<Client> clients;
 
+    public ServerData getUpdate() {
+        return this.update;
+    }
+
     public TicketsManage(ServerData update, List<Client> clients) {
         tickets = new ArrayList<Ticket>();
         this.update = update;
@@ -27,7 +31,8 @@ public class TicketsManage {
     public Client reqClient(int dni) {
         Client clientRes = null;
         for (Client clt : clients) {
-            if(clt.getDNI() == dni) clientRes = clt;
+            if (clt.getDNI() == dni)
+                clientRes = clt;
         }
         return clientRes;
     }
@@ -42,20 +47,24 @@ public class TicketsManage {
         }
         int enableTickets = 0;
         for (Ticket tkt : tickets) {
-            if(tkt.getAtention() == null) enableTickets++;
+            if (tkt.getAtention() == null)
+                enableTickets++;
             if (tkt.getClient().getDNI() == dni) {
                 LocalDateTime lastTicketTime = tkt.getCreateAt();
                 Duration duration = Duration.between(lastTicketTime, LocalDateTime.now());
-    
+
                 if (duration.toMinutes() < 5) {
-                    newTicket.getTickets().getMessage().setMessage("YA TIENES UN TICKET, DEBES ESPERAR AL MENOS 5 MINUTOS PARA SACAR OTRO");
+                    newTicket.setCreateAt(lastTicketTime);
+                    newTicket.getTickets().getMessage()
+                            .setMessage("YA TIENES UN TICKET, DEBES ESPERAR AL MENOS 5 MINUTOS PARA SACAR OTRO");
                     return newTicket;
                 }
             }
         }
 
-        if(enableTickets >= queueMax) {
-            newTicket.getTickets().getMessage().setMessage("EL LÍMITE DE PERSONAS EN COLA HA SIDO SUPERADO, POR FAVOR ESPERE UNOS MINUTOS");
+        if (enableTickets >= queueMax) {
+            newTicket.getTickets().getMessage()
+                    .setMessage("EL LÍMITE DE PERSONAS EN COLA HA SIDO SUPERADO, POR FAVOR ESPERE UNOS MINUTOS");
             return newTicket;
         }
 
@@ -69,7 +78,17 @@ public class TicketsManage {
     public ArrayList<Ticket> getTickets() {
         ArrayList<Ticket> filterTickets = new ArrayList<Ticket>();
         for (Ticket ticket : tickets) {
-            if(ticket.getAtention() == null) {
+            if (ticket.getAtention() == null) {
+                filterTickets.add(ticket);
+            }
+        }
+        return filterTickets;
+    }
+
+    public ArrayList<Ticket> getTicketsAttended() {
+        ArrayList<Ticket> filterTickets = new ArrayList<Ticket>();
+        for (Ticket ticket : tickets) {
+            if (ticket.getAtention() != null) {
                 filterTickets.add(ticket);
             }
         }
@@ -82,12 +101,21 @@ public class TicketsManage {
 
     public int claimTicket(Atention atention, Ticket ticket) {
         for (Ticket tkt : tickets) {
-            if(tkt.getName().equals(ticket.getName())) {
+            if (tkt.getName().equals(ticket.getName())) {
                 tkt.setAtention(atention);
                 return 1;
             }
         }
         update.getLabelQueueSize().setText(Integer.toString(getTickets().size()));
         return 0;
+    }
+
+    public void attendedTicket(Ticket ticket) {
+        for (Ticket tkt : tickets) {
+            if (tkt.getName().equals(ticket.getName())) {
+                tkt.resolvedTicket(ticket.getReason(), ticket.getResponse());
+                return;
+            }
+        }
     }
 }

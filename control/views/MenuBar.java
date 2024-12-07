@@ -22,8 +22,8 @@ public class MenuBar extends JMenuBar {
     private JMenu configBar;
     private JMenuItem configMenu;
 
-    private JMenu helpBar;
-    private JMenuItem help;
+    private JMenu dataBar;
+    private JMenuItem history;
 
     public JMenuItem getConfigMenu() {
         return this.configMenu;
@@ -41,8 +41,8 @@ public class MenuBar extends JMenuBar {
         return this.stopServer;
     }
 
-    public JMenuItem getHelp() {
-        return this.help;
+    public JMenuItem getHistory() {
+        return this.history;
     }
 
     public MenuBar() {
@@ -95,17 +95,17 @@ public class MenuBar extends JMenuBar {
         add(configBar);
         add(Box.createRigidArea(new Dimension(20, 0)));
 
-        helpBar = new JMenu("Ayuda");
-        helpBar.setFont(menuFont);
-        helpBar.setForeground(textColor);
-        helpBar.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
-        helpBar.setOpaque(true);
+        dataBar = new JMenu("Datos");
+        dataBar.setFont(menuFont);
+        dataBar.setForeground(textColor);
+        dataBar.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        dataBar.setOpaque(true);
 
-        help = new JMenuItem("Obtener ayuda");
-        help.setFont(menuFont);
-        helpBar.add(help);
-        add(helpBar);
+        history = new JMenuItem("Historial de Tickets");
+        history.setFont(menuFont);
+        dataBar.add(history);
 
+        add(dataBar);
         add(Box.createHorizontalGlue());
     }
 }

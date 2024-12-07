@@ -14,6 +14,8 @@ import java.awt.event.*;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+import atention.views.MenuBar;
+import atention.views.TicketsData;
 
 public class JFrameA extends JFrame {
     private static ConfigLoader config = new ConfigLoader("atention/config/config.properties");
@@ -26,12 +28,69 @@ public class JFrameA extends JFrame {
     private GridBagConstraints gbc = new GridBagConstraints();
 
     private Attending attending;
-    private static Atention client;
+    private Atention client;
     private ArrayList<Ticket> tickets = new ArrayList<Ticket>();
+
+    private String ip;
+    private String port;
+    private static MenuBar menuBar = new MenuBar();
+    private TicketsData ticketsData = new TicketsData();
 
     private boolean isAttending;
 
-    public ArrayList<Ticket> getTickets() {
+    private void printMenu() {
+        menuBar.getConnectServer().addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                connectServer();
+            }
+        });
+        menuBar.getDisconnectServer().addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                disconnetServer();
+            }
+        });
+        menuBar.getChangePort().addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                String result;
+                result = JOptionPane.showInputDialog("Ingresa el puerto del servidor:");
+                try {
+                    Integer.parseInt(result);
+                    port = result;
+                } catch (NumberFormatException e1) {
+                    JOptionPane.showMessageDialog(null, "Por favor, ingresa un número entero válido.");
+                }
+            }
+        });
+        menuBar.getActiveAutomatic().addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                return;
+            }
+        });
+        menuBar.getHelp().addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                return;
+            }
+        });
+        setJMenuBar(menuBar);
+    }
+
+    private void printMessage(String message) {
+        if (attending != null)
+            remove(attending);
+        panel.removeAll();
+        JLabel labelIP = new JLabel(message);
+
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.LINE_START;
+        panel.add(labelIP, gbc);
+
+        add(panel);
+        revalidate();
+        repaint();
+    }
+
+    private void getTickets() {
         try {
             sendMessage("GetTickets", null);
             Object readObject = input.readObject();
@@ -44,69 +103,60 @@ public class JFrameA extends JFrame {
                         safeTickets.add((Ticket) item);
                 tickets = safeTickets;
             }
-            return tickets;
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
-        return tickets;
     }
 
-    public void updateTickets() {
-        JButton buttonMessage;
-        JLabel labelMessage;
-        panel.removeAll();
+    private void updateTickets() {
         getTickets();
-        int index = 0;
-        for (Ticket ticket : tickets) {
-            labelMessage = new JLabel(ticket.getName() != null ? ticket.getName() : "NO EXISTE");
-            gbc.gridx = 0;
-            gbc.gridy = index;
-            buttonMessage = new JButton("Atender Ticket");
-            buttonMessage.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    onAttend(ticket);
-                }
-            });
-            panel.add(labelMessage, gbc);
-            gbc.gridx = 1;
-            panel.add(buttonMessage, gbc);
-            index++;
+        if (attending != null) {
+            remove(attending);
+            gbc = new GridBagConstraints();
+            gbc.insets = new Insets(10, 10, 10, 10);
         }
-        gbc.gridx = 0;
-        gbc.gridy = index;
-        gbc.anchor = GridBagConstraints.LINE_START;
-        buttonMessage = new JButton("Actualizar");
-        buttonMessage.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                updateTickets();
+        panel.removeAll();
+        if (ticketsData != null)
+            ticketsData.updateData(tickets);
+        if (ticketsData.getTicketButton() != null) {
+            for (int i = 0; i < ticketsData.getTicketButton().size(); i++) {
+                Ticket currentTicket = tickets.get(i);
+                JButton currentButton = ticketsData.getTicketButton().get(i);
+                currentButton.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        onAttend(currentTicket);
+                    }
+                });
             }
-        });
-        panel.add(buttonMessage, gbc);
+        } else {
+            gbc.gridx = 0;
+            gbc.gridy = 3;
+            JLabel labelTicket = new JLabel("Sin tickets por atender");
+            panel.add(labelTicket, gbc);
+        }
+        ticketsData.getTicketsQueue().setText(Integer.toString(tickets.size()));
+        panel.add(ticketsData);
+
         add(panel);
         revalidate();
         repaint();
     }
 
-    public void onAttend(Ticket ticket) {
+    private void onAttend(Ticket ticket) {
         this.isAttending = true;
         remove(panel);
+        setJMenuBar(null);
         attending = new Attending(gbc);
         attending.getLabelTicketName().setText(ticket.getName());
-        attending.getClientName().setText(ticket.getClient().getName() + " " + ticket.getClient().getLastName());
+        attending.getLabelClientDNI().setText(Integer.toString(ticket.getClient().getDNI()));
+        attending.getLabelClientNames().setText(ticket.getClient().getName() + " " + ticket.getClient().getLastName());
         attending.getSubmit().addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 if (!attending.getReason().getText().isEmpty() && !attending.getResponse().getText().isEmpty()) {
                     ticket.setReason(attending.getReason().getText());
                     ticket.setResponse(attending.getResponse().getText());
-
-                    System.out
-                            .println("TICKET ATENDIDO: " + ticket.getName() + "\nRAZÓN: " + ticket.getReason()
-                                    + "\nRESPUESTA: " + ticket.getResponse());
-                    sendMessage("ATTENDED", ticket);
+                    sendMessage("Attended", ticket);
                     Attended();
                 }
             }
@@ -116,52 +166,80 @@ public class JFrameA extends JFrame {
         revalidate();
         repaint();
         sendMessage("ClaimTicket", ticket);
-        setSize(800, 400);
-        setMinimumSize(new Dimension(300, 200));
+        setSize(840, 330);
+        setMinimumSize(new Dimension(840, 330));
+        setMaximumSize(new Dimension(840, 330));
     }
 
     public void Attended() {
+        setJMenuBar(menuBar);
         this.isAttending = false;
-        listener();
-        remove(attending);
-        add(panel);
-        revalidate();
-        repaint();
+        attending.getLabelTicketName().setText("");
+        attending.getLabelClientDNI().setText("");
+        attending.getLabelClientNames().setText("");
+        attending.getCountup().stopTimer();
+        attending.getReason().setText("");
+        attending.getResponse().setText("");
+        setSize(550, 880);
+        setMinimumSize(new Dimension(550, 880));
+        setMaximumSize(new Dimension(550, 880));
     }
 
-    // public void formAtended() {
-    // JFrame form = new JFrame();
+    public void connectServer() {
+        new Thread(() -> {
+            try {
+                sendMessage("Initialize", null);
+                int res = (int) input.readObject();
+                if (res == 0) {
+                    printMessage("Ya hay una aplicación conectada en tu escritorio.");
+                    return;
+                }
+                this.isAttending = false;
+                updateTickets();
+                menuBar.getConnectServer().setEnabled(false);
+                menuBar.getDisconnectServer().setEnabled(true);
+                menuBar.getChangePort().setEnabled(false);
+                listener();
+            } catch (Exception e) {
+                printMessage("Hubo un problema al conectar con el servidor.");
+                e.printStackTrace();
+            }
+        }).start();
+    }
 
-    // }
+    public void disconnetServer() {
+        sendMessage("Close", null);
+        closeResources();
+        menuBar.getConnectServer().setEnabled(true);
+        menuBar.getDisconnectServer().setEnabled(false);
+        menuBar.getChangePort().setEnabled(true);
+        printMessage("No está conectado a algún servidor.");
+    }
 
     public void initialize() {
         try {
-            String ip = InetAddress.getLocalHost().getHostAddress();
-            client = new Atention(ip, config.getProperty("atention.name"), new Message(null, null));
-
-            sendMessage("Initialize", null);
-
-            int res = (int) input.readObject();
-            if (res == 0)
-                return;
-
-            /* PANEL */
+            panel = new JPanel(new GridBagLayout());
             gbc.insets = new Insets(10, 10, 10, 10);
 
-            /* LABELS AND FIELDS */
+            ip = InetAddress.getLocalHost().getHostAddress();
+            port = config.getProperty("control.port");
+            menuBar.getDisconnectServer().setEnabled(false);
+            menuBar.getChangePort().setEnabled(true);
 
-            /* BUTTONS */
+            printMessage("No estás conectado a algún servidor.");
+            printMenu();
 
-            /* ACTIONS */
-            this.isAttending = false;
+            gbc.gridx = 0;
+            gbc.gridy = 0;
+            gbc.anchor = GridBagConstraints.LINE_START;
+            add(panel);
 
-            /* ADDS */
-            updateTickets();
+            client = new Atention(ip, config.getProperty("atention.name"), new Message(null, null));
 
-            /* CONFIGS */
             setTitle("ATENCION " + config.getProperty("atention.name"));
-            setSize(400, 200);
-            setMinimumSize(new Dimension(300, 200));
+            setSize(550, 880);
+            setMinimumSize(new Dimension(550, 880));
+            setMaximumSize(new Dimension(550, 880));
             setLocationRelativeTo(null);
             setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
             addWindowListener(new WindowAdapter() {
@@ -180,7 +258,6 @@ public class JFrameA extends JFrame {
                 }
             });
             setVisible(true);
-            listener();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -188,22 +265,16 @@ public class JFrameA extends JFrame {
 
     private void listener() {
         new Thread(() -> {
-            while (true) {
+            while (!socket.isClosed()) {
                 try {
                     Object response = input.readObject();
-                    if (response != null) {
+                    if (response != null)
                         if (response.equals("UPDATE"))
                             if (!isAttending) {
-                                System.out.println("SI");
                                 updateTickets();
                             }
-                    } else {
-                        System.out.println("El servidor envió un objeto nulo.");
-                    }
-                } catch (EOFException e) {
-                    System.out.println("El servidor cerró la conexión antes de enviar datos.");
-                } catch (IOException | ClassNotFoundException e) {
-                    e.printStackTrace();
+                } catch (Exception e) {
+                    continue;
                 }
             }
         }).start();
@@ -212,10 +283,11 @@ public class JFrameA extends JFrame {
     private void sendMessage(String message, Object object) {
         try {
             socket = new Socket(config.getProperty("control.server"),
-                    Integer.parseInt(config.getProperty("control.port")));
+                    Integer.parseInt(
+                            config.getProperty("control.port").equals(port) ? config.getProperty("control.port")
+                                    : port));
             output = new ObjectOutputStream(socket.getOutputStream());
             input = new ObjectInputStream(socket.getInputStream());
-
             client.getMessage().setMessage(message);
             client.getMessage().setObject(object);
             output.writeObject(client);
@@ -227,11 +299,11 @@ public class JFrameA extends JFrame {
 
     private void closeResources() {
         try {
-            if (output != null)
-                output.close();
             if (input != null)
                 input.close();
-            if (socket != null && !socket.isClosed())
+            if (output != null)
+                output.close();
+            if (socket != null || !socket.isClosed())
                 socket.close();
         } catch (Exception e) {
             e.printStackTrace();

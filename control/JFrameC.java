@@ -12,17 +12,20 @@ import control.utils.TicketManage;
 import control.utils.TicketsManage;
 import control.views.MenuBar;
 import control.views.ServerData;
+import control.views.TicketTableViewer;
 import utils.ClientDataProcessor;
 import utils.ConfigLoader;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
+
 import types.Client;
 import java.io.*;
 
 public class JFrameC extends JFrame {
     /* CONFIG */
+    private JFrameC window = this;
     private static final String DATA_FILE_PATH = "control/data/clients.csv";
     private static ConfigLoader config = new ConfigLoader("control/config/config.properties");
 
@@ -34,7 +37,7 @@ public class JFrameC extends JFrame {
     private ServerSocket server;
     private boolean isRunning = false;
 
-    private GridBagConstraints gbc = new GridBagConstraints();;
+    private GridBagConstraints gbc = new GridBagConstraints();
     private ServerData serverData = new ServerData(gbc);
     private List<Client> clients = new ClientDataProcessor().loadClients(DATA_FILE_PATH);
 
@@ -43,12 +46,17 @@ public class JFrameC extends JFrame {
     private ManageManage manage_connects = new ManageManage(serverData);
     private TicketsManage tickets = new TicketsManage(serverData, clients);
 
+    private TicketTableViewer ticketTableViewer;
     private JPanel panel;
     protected JButton buttonUpdate;
     private MenuBar menuBar = new MenuBar();
 
     public List<Client> getClients() {
         return this.clients;
+    }
+
+    public TicketTableViewer getTicketTableViewer() {
+        return this.ticketTableViewer;
     }
 
     public AtentionManage getAtentionManage() {
@@ -77,7 +85,6 @@ public class JFrameC extends JFrame {
                 showConfig();
             }
         });
-
         menuBar.getStartServer().addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 startServer();
@@ -93,10 +100,9 @@ public class JFrameC extends JFrame {
                 stopServer();
             }
         });
-
-        menuBar.getHelp().addActionListener(new ActionListener() {
+        menuBar.getHistory().addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                showHelp();
+                ticketTableViewer = new TicketTableViewer(window);
             }
         });
         setJMenuBar(menuBar);
@@ -192,10 +198,8 @@ public class JFrameC extends JFrame {
         panel = new JPanel(new GridBagLayout());
         gbc.insets = new Insets(10, 10, 10, 10);
 
-        /* LABELS AND FIELDS */
         JLabel labelIP = new JLabel(message);
 
-        /* ADDS */
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.LINE_START;
@@ -206,23 +210,9 @@ public class JFrameC extends JFrame {
         repaint();
     }
 
-    public void showHelp() {
-        JFrame help = new JFrame();
-        help.add(panel);
-
-        help.setTitle("Ayuda");
-        help.setSize(550, 880);
-        help.setMaximumSize(new Dimension(400, 850));
-        help.setMinimumSize(new Dimension(400, 800));
-        help.setLocationRelativeTo(null);
-        help.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-        setVisible(true);
-        help.setVisible(true);
-    }
-
     public void initialize() {
         try {
-            /* PANEL */
+            window = this;
             panel = new JPanel(new GridBagLayout());
             gbc.insets = new Insets(10, 10, 10, 10);
 
@@ -230,24 +220,20 @@ public class JFrameC extends JFrame {
             menuBar.getStopServer().setEnabled(false);
             menuBar.getRestartServer().setEnabled(false);
 
-            /* LABELS AND FIELDS */
             JLabel labelIP = new JLabel("El servidor no ha iniciado.");
 
             printMenu();
 
-            /* ADDS */
             gbc.gridx = 0;
             gbc.gridy = 0;
             gbc.anchor = GridBagConstraints.LINE_START;
             panel.add(labelIP, gbc);
-
             add(panel);
 
-            /* CONFIGS */
             setTitle("Control");
             setSize(550, 880);
-            setMaximumSize(new Dimension(400, 850));
-            setMinimumSize(new Dimension(400, 800));
+            setMaximumSize(new Dimension(550, 880));
+            setMinimumSize(new Dimension(550, 880));
             setLocationRelativeTo(null);
             setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
             setVisible(true);
