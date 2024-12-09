@@ -8,7 +8,7 @@ Este proyecto se ha comenzado el día 16/10/2024 para ser presentado como Proyec
 
 ### Instrucciones:
 
-1.  Leer [PROBLEM.md]().
+1.  Leer [PROBLEM.md](https://github.com/zincognity/Manage-Queue-Connects/blob/main/PROBLEM.md).
 2.  Dirigirse a un directorio local a través de la consola.
 
     ```console
